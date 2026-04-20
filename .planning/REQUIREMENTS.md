@@ -102,10 +102,14 @@
 
 ### Infrastructure
 
-- [ ] **INFR-01**: Single Docker image with Next.js + PocketBase (supervisord or similar)
-- [ ] **INFR-02**: Multi-arch image: linux/amd64 + linux/arm64
-- [ ] **INFR-03**: Final image under 300MB
-- [ ] **INFR-04**: Single `./data` volume for all persistence (PB DB + uploads)
+- [x] **INFR-01
+**: Single Docker image with Next.js + PocketBase (supervisord or similar)
+- [x] **INFR-02
+**: Multi-arch image: linux/amd64 + linux/arm64
+- [x] **INFR-03
+**: Final image under 300MB
+- [x] **INFR-04
+**: Single `./data` volume for all persistence (PB DB + uploads)
 - [x] **INFR-05
 **: `/api/health` endpoint for Docker / Uptime Kuma
 - [ ] **INFR-06**: Three compose variants: LAN-only (default), Caddy (public domain), Tailscale (private HTTPS)
@@ -224,18 +228,18 @@
 | GAME-03 | Phase 6 | Pending |
 | GAME-04 | Phase 6 | Pending |
 | GAME-05 | Phase 6 | Pending |
-| INFR-01 | Phase 1 | Pending |
-| INFR-02 | Phase 1 | Pending |
-| INFR-03 | Phase 1 | Pending |
-| INFR-04 | Phase 1 | Pending |
-| INFR-05 | Phase 1 | Pending |
+| INFR-01 | Phase 1 | Complete (01-02) |
+| INFR-02 | Phase 1 | Complete (01-02) |
+| INFR-03 | Phase 1 | Complete (01-02) |
+| INFR-04 | Phase 1 | Complete (01-02) |
+| INFR-05 | Phase 1 | Complete (01-01) |
 | INFR-06 | Phase 1 | Pending |
 | INFR-07 | Phase 7 | Pending |
 | INFR-08 | Phase 7 | Pending |
 | INFR-09 | Phase 7 | Pending |
-| INFR-10 | Phase 1 | Pending |
-| INFR-11 | Phase 1 | Pending |
-| INFR-12 | Phase 1 | Pending |
+| INFR-10 | Phase 1 | Complete (01-02) |
+| INFR-11 | Phase 1 | Complete (01-01) |
+| INFR-12 | Phase 1 | Complete (01-01) |
 
 **Coverage:**
 - v1 requirements: 71 total
