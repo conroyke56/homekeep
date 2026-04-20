@@ -106,14 +106,18 @@
 - [ ] **INFR-02**: Multi-arch image: linux/amd64 + linux/arm64
 - [ ] **INFR-03**: Final image under 300MB
 - [ ] **INFR-04**: Single `./data` volume for all persistence (PB DB + uploads)
-- [ ] **INFR-05**: `/api/health` endpoint for Docker / Uptime Kuma
+- [x] **INFR-05
+**: `/api/health` endpoint for Docker / Uptime Kuma
 - [ ] **INFR-06**: Three compose variants: LAN-only (default), Caddy (public domain), Tailscale (private HTTPS)
 - [ ] **INFR-07**: App detects insecure context and informs user what's unavailable
 - [ ] **INFR-08**: PWA manifest + service worker in HTTPS modes
 - [ ] **INFR-09**: GitHub Actions CI/CD: lint, test on PR; multi-arch build → GHCR on tag
-- [ ] **INFR-10**: Env-driven config — no hardcoded URLs, paths, or secrets
-- [ ] **INFR-11**: `.env.example` with structure, real `.env` git-ignored
-- [ ] **INFR-12**: MIT license, public GitHub repo
+- [x] **INFR-10
+**: Env-driven config — no hardcoded URLs, paths, or secrets
+- [x] **INFR-11
+**: `.env.example` with structure, real `.env` git-ignored
+- [x] **INFR-12
+**: MIT license, public GitHub repo
 
 ## v2 Requirements (v1.1)
 

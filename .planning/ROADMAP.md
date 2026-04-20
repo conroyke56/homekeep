@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 7 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Next.js 16 + TS + Tailwind 4 + Vitest + Playwright scaffold with health route, PB client factory, LICENSE, .env.example
+- [x] 01-01-PLAN.md — Next.js 16 + TS + Tailwind 4 + Vitest + Playwright scaffold with health route, PB client factory, LICENSE, .env.example
 - [ ] 01-02-PLAN.md — Multi-stage Dockerfile with s6-overlay + Caddy + PocketBase, .dockerignore, image-size and multi-arch helper scripts
 - [ ] 01-03-PLAN.md — s6-overlay v3 service tree (caddy, pocketbase, nextjs longruns) with user-bundle registration
 - [ ] 01-04-PLAN.md — Caddyfile with path-ordered routing (/api/health -> Next.js, /api/* and /_/* -> PocketBase with SSE-safe flush_interval)

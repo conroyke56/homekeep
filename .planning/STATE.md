@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 1 context gathered
-last_updated: "2026-04-20T13:39:54.012Z"
-last_activity: 2026-04-20 — Roadmap created
+status: executing
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-04-20T21:32:43.148Z"
+last_activity: 2026-04-20
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 7
+  completed_plans: 1
+  percent: 14
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** The household's recurring maintenance is visible, evenly distributed, and nothing falls through the cracks — without creating anxiety or guilt.
-**Current focus:** Phase 1: Scaffold & Infrastructure
+**Current focus:** Phase 1 — Scaffold & Infrastructure
 
 ## Current Position
 
-Phase: 1 of 7 (Scaffold & Infrastructure)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-04-20 — Roadmap created
+Phase: 1 (Scaffold & Infrastructure) — EXECUTING
+Plan: 2 of 7
+Status: Ready to execute
+Last activity: 2026-04-20
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 14%
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01 P01-01 | 9min | 2 tasks | 25 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,10 @@ Recent decisions affecting current work:
 - Direct PB SDK from browser (client-side auth)
 - Link-only invites (no SMTP)
 - Equal-weight coverage ring with frequency-normalized overdue ratio
+- 01-01: Bumped @types/node 22.10.5 -> 22.19.17 (vite7 peer)
+- 01-01: Downgraded eslint 10.2.1 -> 9.39.4 (eslint-plugin-react incompat)
+- 01-01: Replaced next lint (removed in Next 16) with 'eslint .'
+- 01-01: eslint-config-next@16.2.4 is flat config; import entries directly without FlatCompat
 
 ### Pending Todos
 
@@ -82,6 +87,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: --stopped-at
-Stopped at: Phase 1 context gathered
-Resume file: --resume-file
+Last session: 2026-04-20T21:32:43.134Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None
+
+**Planned Phase:** 1 (Scaffold & Infrastructure) — 7 plans — 2026-04-20T21:05:59.551Z
