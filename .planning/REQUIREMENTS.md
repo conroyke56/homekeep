@@ -112,7 +112,8 @@
 **: Single `./data` volume for all persistence (PB DB + uploads)
 - [x] **INFR-05
 **: `/api/health` endpoint for Docker / Uptime Kuma
-- [ ] **INFR-06**: Three compose variants: LAN-only (default), Caddy (public domain), Tailscale (private HTTPS)
+- [x] **INFR-06
+**: Three compose variants: LAN-only (default), Caddy (public domain), Tailscale (private HTTPS)
 - [ ] **INFR-07**: App detects insecure context and informs user what's unavailable
 - [ ] **INFR-08**: PWA manifest + service worker in HTTPS modes
 - [ ] **INFR-09**: GitHub Actions CI/CD: lint, test on PR; multi-arch build → GHCR on tag
@@ -233,7 +234,7 @@
 | INFR-03 | Phase 1 | Complete (01-02) |
 | INFR-04 | Phase 1 | Complete (01-02) |
 | INFR-05 | Phase 1 | Complete (01-01) |
-| INFR-06 | Phase 1 | Pending |
+| INFR-06 | Phase 1 | Complete (01-05) |
 | INFR-07 | Phase 7 | Pending |
 | INFR-08 | Phase 7 | Pending |
 | INFR-09 | Phase 7 | Pending |

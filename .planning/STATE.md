@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-04-20T21:49:39.813Z"
+stopped_at: Completed 01-05-PLAN.md
+last_updated: "2026-04-20T21:57:08.666Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 7
-  completed_plans: 4
-  percent: 57
+  completed_plans: 5
+  percent: 71
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 1 (Scaffold & Infrastructure) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-04-20
 
-Progress: [██████░░░░] 57%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [██████░░░░] 57%
 | Phase 01 P01-02 | 3min | 2 tasks | 4 files |
 | Phase 01 P01-03 | 1min | 1 tasks | 12 files |
 | Phase 01 P04 | 1min | 1 tasks | 1 files |
+| Phase 01 P01-05 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,10 @@ Recent decisions affecting current work:
 - 01-04: Caddyfile tab-indented matching RESEARCH.md §Critical Design Choice byte-for-byte
 - 01-04: global options block added (auto_https off, admin off) to minimize attack surface on internal port
 - 01-04: caddy validate deferred to 01-06 CI (binary not installed on exec host); static-grep gate green
+- 01-05: kept env_file: - .env short form per acceptance grep; operators need docker/.env symlink or --project-directory .
+- 01-05: pull_policy: if_not_present (Docker normalizes to 'missing') -- predictable local behavior
+- 01-05: added pocketbase/pb_migrations/.gitkeep (Rule 3) to preserve committed-empty-dir contract git cannot track empty dirs
+- 01-05: dev-pb.js runs as .js without type:module -- verified working on Node 22.22.0 via smoke test (downloaded PB, served :8090, /api/health 200)
 
 ### Pending Todos
 
@@ -97,8 +102,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-20T21:49:39.796Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-04-20T21:57:08.650Z
+Stopped at: Completed 01-05-PLAN.md
 Resume file: None
 
 **Planned Phase:** 1 (Scaffold & Infrastructure) — 7 plans — 2026-04-20T21:05:59.551Z
