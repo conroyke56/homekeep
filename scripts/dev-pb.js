@@ -13,12 +13,17 @@ const PB_VERSION = '0.37.1';
 const PB_DIR = './.pb';
 const PB_BIN = `${PB_DIR}/pocketbase`;
 const MIGRATIONS_DIR = './pocketbase/pb_migrations';
+const HOOKS_DIR = './pocketbase/pb_hooks';
 
 const platform = process.platform === 'darwin' ? 'darwin' : 'linux';
 const arch = process.arch === 'arm64' ? 'arm64' : 'amd64';
 
 if (!existsSync(MIGRATIONS_DIR)) {
   mkdirSync(MIGRATIONS_DIR, { recursive: true });
+}
+
+if (!existsSync(HOOKS_DIR)) {
+  mkdirSync(HOOKS_DIR, { recursive: true });
 }
 
 if (!existsSync(PB_BIN)) {
@@ -48,6 +53,7 @@ const pb = spawn(
     '--http=127.0.0.1:8090',
     `--dir=${PB_DIR}/pb_data`,
     `--migrationsDir=${MIGRATIONS_DIR}`,
+    `--hooksDir=${HOOKS_DIR}`,
     '--dev',
   ],
   { stdio: 'inherit' }
