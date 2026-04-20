@@ -32,12 +32,16 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. All persistent data lives in a single `./data` volume that survives container restarts
   4. The image builds successfully for both amd64 and arm64 architectures
   5. A `.env.example` file documents all configuration, and no secrets are hardcoded
-**Plans**: TBD
+**Plans**: 7 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md — Next.js 16 + TS + Tailwind 4 + Vitest + Playwright scaffold with health route, PB client factory, LICENSE, .env.example
+- [ ] 01-02-PLAN.md — Multi-stage Dockerfile with s6-overlay + Caddy + PocketBase, .dockerignore, image-size and multi-arch helper scripts
+- [ ] 01-03-PLAN.md — s6-overlay v3 service tree (caddy, pocketbase, nextjs longruns) with user-bundle registration
+- [ ] 01-04-PLAN.md — Caddyfile with path-ordered routing (/api/health -> Next.js, /api/* and /_/* -> PocketBase with SSE-safe flush_interval)
+- [ ] 01-05-PLAN.md — docker-compose.yml (LAN variant) + scripts/dev-pb.js for native dev workflow
+- [ ] 01-06-PLAN.md — GitHub Actions ci.yml (lint/test/build/e2e + image-size + NEXT_PUBLIC_ guard) and release.yml (multi-arch GHCR push on v* tag)
+- [ ] 01-07-PLAN.md — Public-polish README.md covering quickstart, first-boot PB setup, dev workflow, caveats, MIT license
 
 ### Phase 2: Auth & Core Data
 **Goal**: A single user can create an account, manage homes with areas, and define tasks with frequencies and schedule modes
@@ -147,7 +151,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Scaffold & Infrastructure | 0/3 | Not started | - |
+| 1. Scaffold & Infrastructure | 0/7 | Not started | - |
 | 2. Auth & Core Data | 0/3 | Not started | - |
 | 3. Core Loop | 0/3 | Not started | - |
 | 4. Collaboration | 0/2 | Not started | - |
