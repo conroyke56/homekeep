@@ -19,6 +19,14 @@ const config = [
       'data/**',
     ],
   },
+  {
+    // Test files routinely need `any` casts for global mocks (fetch, window, globalThis).
+    // Relax the strictest typing rules for tests only — production code remains strict.
+    files: ['tests/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 ];
 
 export default config;
