@@ -58,7 +58,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — PocketBase migration (homes/areas/tasks + users.last_viewed_home_id) + pb_hooks (Whole Home auto-create, SMTP bootstrap, rate limits) + dev-pb.js --hooksDir + Whole Home integration test
-- [ ] 02-02-PLAN.md — shadcn/ui init + Tailwind 4 warm-accent theme + SSR cookie bridge (lib/pocketbase-server.ts + lib/pocketbase-browser.ts) + new-deps install (react-hook-form, @dnd-kit, date-fns-tz, sonner, lucide-react)
+- [x] 02-02-PLAN.md — shadcn/ui init + Tailwind 4 warm-accent theme + SSR cookie bridge (lib/pocketbase-server.ts + lib/pocketbase-browser.ts) + new-deps install (react-hook-form, @dnd-kit, date-fns-tz, sonner, lucide-react)
 - [ ] 02-03-PLAN.md — Auth pages + server actions + proxy.ts (Next 16) + zod schemas + account menu + Playwright auth happy-path E2E
 - [ ] 02-04-PLAN.md — Homes + Areas CRUD (HomeSwitcher, SortableAreaList, IconPicker, ColorPicker, area palette) + last-viewed persistence + Whole Home delete guard E2E
 - [ ] 02-05-PLAN.md — Tasks CRUD + computeNextDue pure function (13-case matrix) + TaskForm (cycle/anchored, freq quick-select) + NextDueDisplay (date-fns-tz) + D-21 full happy-path E2E

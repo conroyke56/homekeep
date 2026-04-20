@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-04-20T23:32:03.970Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-04-20T23:45:39.183Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 12
-  completed_plans: 8
-  percent: 67
+  completed_plans: 9
+  percent: 75
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 2 (Auth & Core Data) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-04-20
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [███████░░░] 67%
 | Phase 01 P01-06 | 2min | 2 tasks | 2 files |
 | Phase 01 P01-07 | 2min | 1 tasks | 1 files |
 | Phase 02 P02-01 | 14min | 2 tasks | 9 files |
+| Phase 02 P02 | 8min | 2 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,11 @@ Recent decisions affecting current work:
 - 02-01: Rate-limit labels use camelCase (*:authWithPassword) and path prefixes (/api/); lone * and kebab-case actions rejected by Go validator
 - 02-01: Integration-test pattern — create superuser BEFORE serve start to avoid SQLite WAL race; port 18090 with unique --dir per test file
 - 02-01: ESLint override disables triple-slash-reference for pocketbase/pb_migrations + pb_hooks (PB JSVM pattern, ESM import unsupported in goja)
+- 02-02: shadcn 4.3.1 preset system writes empty form.json — use classic style=new-york baseColor=stone for real content
+- 02-02: Strip all carets and remove shadcn CLI from runtime deps — exact-pin pattern carried forward (cva, clsx, tailwind-merge, next-themes, radix-ui, tw-animate-css)
+- 02-02: Removed bogus @import 'shadcn/tailwind.css' (no such package published); tokens live in :root
+- 02-02: Test hygiene — clear jsdom localStorage in beforeEach so PB LocalAuthStore doesn't leak authStore state across tests
+- 02-02: lib/pocketbase.ts kept as 13-line back-compat shim so Phase 1 tests/unit/pocketbase.test.ts stays green — new code uses the split factories
 
 ### Pending Todos
 
@@ -118,8 +124,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-20T23:32:03.948Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-04-20T23:45:39.166Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
 
 **Planned Phase:** 2 (Auth & Core Data) — 5 plans — 2026-04-20T23:14:37.047Z

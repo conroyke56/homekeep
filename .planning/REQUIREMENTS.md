@@ -9,7 +9,8 @@
 
 - [x] **AUTH-01
 **: User can sign up with email and password
-- [ ] **AUTH-02**: User can log in and session persists across browser refresh
+- [x] **AUTH-02
+**: User can log in and session persists across browser refresh
 - [ ] **AUTH-03**: User can log out from any page
 - [x] **AUTH-04
 **: User can reset password via email link (PocketBase built-in)
