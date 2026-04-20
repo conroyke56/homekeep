@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-04-20T21:39:08.727Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-04-20T21:45:08.012Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 7
-  completed_plans: 2
-  percent: 29
+  completed_plans: 3
+  percent: 43
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 1 (Scaffold & Infrastructure) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-04-20
 
-Progress: [███░░░░░░░] 29%
+Progress: [████░░░░░░] 43%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [███░░░░░░░] 29%
 *Updated after each plan completion*
 | Phase 01 P01-01 | 9min | 2 tasks | 25 files |
 | Phase 01 P01-02 | 3min | 2 tasks | 4 files |
+| Phase 01 P01-03 | 1min | 1 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Recent decisions affecting current work:
 - 01-01: eslint-config-next@16.2.4 is flat config; import entries directly without FlatCompat
 - 01-02: HEALTHCHECK collapsed to single line (plan action block vs acceptance grep mismatch)
 - 01-02: docker build deferred to 01-06 CI (runtime stage COPY targets come from 01-03 + 01-04)
+- 01-03: parallel s6 startup (no dependencies.d/<peer>) relies on Caddy upstream-retry + HEALTHCHECK start-period=30s
+- 01-03: Caddy stays root (T-01-03-03 accept); PB and Next.js drop to node via s6-setuidgid
 
 ### Pending Todos
 
@@ -90,8 +93,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-20T21:39:08.708Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-04-20T21:45:07.994Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None
 
 **Planned Phase:** 1 (Scaffold & Infrastructure) — 7 plans — 2026-04-20T21:05:59.551Z
