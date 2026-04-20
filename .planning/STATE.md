@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 01-06-PLAN.md
-last_updated: "2026-04-20T22:02:59.832Z"
+status: verifying
+stopped_at: Completed 01-07-PLAN.md (phase 1 done)
+last_updated: "2026-04-20T22:10:52.409Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 7
-  completed_plans: 6
-  percent: 86
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 Phase: 1 (Scaffold & Infrastructure) — EXECUTING
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-20
 
-Progress: [█████████░] 86%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [█████████░] 86%
 | Phase 01 P04 | 1min | 1 tasks | 1 files |
 | Phase 01 P01-05 | 3min | 2 tasks | 3 files |
 | Phase 01 P01-06 | 2min | 2 tasks | 2 files |
+| Phase 01 P01-07 | 2min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,10 @@ Recent decisions affecting current work:
 - 01-06: strict permissions split — ci.yml contents:read only, release.yml sole packages:write (PR cannot publish to GHCR)
 - 01-06: actions pinned to major versions (@v4/@v5/@v6/@v7); SHA pinning + cosign deferred to phase 7
 - 01-06: D-10 branch protection + GHCR visibility + Actions write permissions are user_setup (no gh CLI on host)
+- 01-07: README adds maintainer fork checklist (workflow perms + branch protection + GHCR visibility) from 01-06 user_setup
+- 01-07: README dual-renders docker run (one-liner + multi-line) to satisfy key_links single-line regex
+- 01-07: README documents compose-dir footgun (env_file/./data resolve relative to docker/, not cwd)
+- 01-07: UID fallback uses --entrypoint sh -u 0 override so chown actually executes (not s6 /init CMD-swallow)
 
 ### Pending Todos
 
@@ -107,8 +112,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-20T22:02:59.815Z
-Stopped at: Completed 01-06-PLAN.md
+Last session: 2026-04-20T22:10:52.393Z
+Stopped at: Completed 01-07-PLAN.md (phase 1 done)
 Resume file: None
 
 **Planned Phase:** 1 (Scaffold & Infrastructure) — 7 plans — 2026-04-20T21:05:59.551Z
