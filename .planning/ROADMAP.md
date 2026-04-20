@@ -14,6 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Scaffold & Infrastructure** - Docker container with Next.js + PocketBase running, dev environment, compose files, health endpoint (completed 2026-04-20)
 - [ ] **Phase 2: Auth & Core Data** - Single user can sign up, create homes/areas/tasks, and manage their data
+- [ ] **Phase 2.1: Deploy Checkpoint** (INSERTED) - Build local image + docker compose up on VPS port 80 for live preview at http://46.62.151.57/
 - [ ] **Phase 3: Core Loop** - Three-band main view with task completion, coverage ring, and early-completion guard
 - [ ] **Phase 4: Collaboration** - Share homes via invite links, manage members, cascading task assignment
 - [ ] **Phase 5: Views & Onboarding** - By Area, Person, and History views plus seed task library wizard
@@ -62,6 +63,21 @@ Plans:
 - [ ] 02-03-PLAN.md — Auth pages + server actions + proxy.ts (Next 16) + zod schemas + account menu + Playwright auth happy-path E2E
 - [ ] 02-04-PLAN.md — Homes + Areas CRUD (HomeSwitcher, SortableAreaList, IconPicker, ColorPicker, area palette) + last-viewed persistence + Whole Home delete guard E2E
 - [ ] 02-05-PLAN.md — Tasks CRUD + computeNextDue pure function (13-case matrix) + TaskForm (cycle/anchored, freq quick-select) + NextDueDisplay (date-fns-tz) + D-21 full happy-path E2E
+
+### Phase 2.1: Deploy Checkpoint (INSERTED)
+**Goal**: Build the current HomeKeep image locally and deploy via docker compose on VPS port 80 so the user can hit http://46.62.151.57/ and see the live Phase 2 state.
+**Depends on**: Phase 2
+**Requirements**: (no new REQ-IDs — deploy infra only)
+**Success Criteria** (what must be TRUE):
+  1. `docker buildx build --platform linux/amd64 --load -t homekeep:phase-2 -t homekeep:latest .` succeeds
+  2. `docker compose up -d` (via the dev override) serves the app on VPS port 80
+  3. `curl http://46.62.151.57/api/health` returns `{"status":"ok","nextjs":"ok","pocketbase":"ok"}` from the open internet
+  4. `./data` is bind-mounted and survives container restart (HOME records persist)
+  5. README documents the "one-line refresh" command for the user to redeploy after any `git pull`
+**Plans**: TBD
+
+Plans:
+- [ ] 02.1-01: TBD
 
 ### Phase 3: Core Loop
 **Goal**: Users experience the differentiating three-band task view, can complete tasks, and see household coverage at a glance
