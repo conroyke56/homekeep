@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-04-21T06:40:26.474Z"
+status: executing
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-04-21T07:17:12.810Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 8
-  completed_phases: 7
-  total_plans: 24
-  completed_plans: 25
-  percent: 88
+  completed_phases: 6
+  total_plans: 26
+  completed_plans: 26
+  percent: 100
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** The household's recurring maintenance is visible, evenly distributed, and nothing falls through the cracks — without creating anxiety or guilt.
-**Current focus:** Phase 6 — Notifications & Gamification
+**Current focus:** Phase 7 — PWA & Release
 
 ## Current Position
 
-Phase: 7
-Plan: Not started
-Status: Ready to plan
+Phase: 7 (PWA & Release) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-21
 
 Progress: [██████████] 100%
@@ -80,6 +80,7 @@ Progress: [██████████] 100%
 | Phase 06 P01 | 12min | 2 tasks | 13 files |
 | Phase Phase 06 PP02 | 18min | 2 tasks | 14 files |
 | Phase Phase 06 PP03 | 13min | 3 tasks tasks | 12 files files |
+| Phase 07 P01 | 15 | 2 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -207,6 +208,14 @@ Recent decisions affecting current work:
 - 06-03: useRef + useEffect guard on useActionState state identity prevents duplicate sonner toasts on unrelated re-renders
 - 06-03: Celebration overlay keyed on Date.now() so back-to-back crossovers remount + fresh 2500ms timer
 - 06-03: playwright.config.ts exports 46-char E2E_ADMIN_SCHEDULER_TOKEN + retains DISABLE_SCHEDULER=true so tests trigger scheduler deterministically via POST /api/admin/run-scheduler
+- 07-01: Serwist 9.2.1 (not next-pwa) — actively maintained, documented for Next 16 App Router
+- 07-01: Next 16 Metadata API split — themeColor in Viewport export; manifest/icons/appleWebApp stay in Metadata
+- 07-01: build script → 'next build --webpack' — Next 16 Turbopack default cannot load @serwist/next webpack plugin (serwist#54)
+- 07-01: InsecureContextBanner uses useSyncExternalStore (not useState+useEffect) — React 19 react-hooks/set-state-in-effect rule blocks the effect-driven pattern; external-store also eliminates SSR flash via getServerSnapshot=false
+- 07-01: isSecureContext SSR fail-OPEN (undefined window → true) — prevents HTTP-banner flash during server render on HTTPS deploys; client hydration reads real value
+- 07-01: public/sw.js + /public/swe-worker-*.js gitignored — regenerated on every prod build; committing would drift vs app code
+- 07-01: E2E stubs window.isSecureContext=false via page.addInitScript — http://localhost is W3C secure-context allowlisted
+- 07-01: app/sw.ts uses triple-slash /// <reference lib="webworker" /> + @types/serviceworker — keeps WebWorker + DOM types isolated from main app bundle
 
 ### Pending Todos
 
@@ -225,8 +234,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-21T06:40:26.460Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-04-21T07:16:56.413Z
+Stopped at: Completed 07-01-PLAN.md
 Resume file: None
 
-**Planned Phase:** 6 (Notifications & Gamification) — 3 plans — 2026-04-21T05:45:07.848Z
+**Planned Phase:** 7 (PWA & Release) — 2 plans — 2026-04-21T06:58:11.893Z

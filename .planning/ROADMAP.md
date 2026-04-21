@@ -160,7 +160,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md -- PWA manifest + Serwist service worker + secure-context detection + warm banner for HTTP deployments
+- [x] 07-01-PLAN.md — PWA manifest + Serwist service worker + secure-context detection + warm banner for HTTP deployments
 - [ ] 07-02-PLAN.md -- Caddy + Tailscale compose variants + deployment/PWA-install docs + INFR-09 release pipeline re-validation
 
 ## Progress
@@ -176,4 +176,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 4. Collaboration | 3/3 | Complete    | 2026-04-21 |
 | 5. Views & Onboarding | 3/3 | Complete    | 2026-04-21 |
 | 6. Notifications & Gamification | 3/3 | Complete    | 2026-04-21 |
-| 7. PWA & Release | 0/2 | Not started | - |
+| 7. PWA & Release | 1/2 | In progress | - |

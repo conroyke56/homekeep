@@ -173,8 +173,10 @@
 **: `/api/health` endpoint for Docker / Uptime Kuma
 - [x] **INFR-06
 **: Three compose variants: LAN-only (default), Caddy (public domain), Tailscale (private HTTPS)
-- [ ] **INFR-07**: App detects insecure context and informs user what's unavailable
-- [ ] **INFR-08**: PWA manifest + service worker in HTTPS modes
+- [x] **INFR-07
+**: App detects insecure context and informs user what's unavailable
+- [x] **INFR-08
+**: PWA manifest + service worker in HTTPS modes
 - [ ] **INFR-09**: GitHub Actions CI/CD: lint, test on PR; multi-arch build → GHCR on tag
 - [x] **INFR-10
 **: Env-driven config — no hardcoded URLs, paths, or secrets
