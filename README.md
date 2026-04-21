@@ -95,7 +95,7 @@ docker run -d -p 3000:3000 \
   -e SITE_URL=http://localhost:3000 \
   -e NTFY_URL=https://ntfy.sh \
   --name homekeep \
-  ghcr.io/conroyke56/homekeep:latest
+  ghcr.io/conroyke56/homekeep:1.0.0-rc1
 ```
 
 Open <http://localhost:3000>, sign up, create a home. The PocketBase admin UI lives at `/_/` — on first boot check the container logs for an installer link.
