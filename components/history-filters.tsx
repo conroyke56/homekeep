@@ -121,10 +121,16 @@ export function HistoryFilters({
         data-filter-range-group
       >
         <span className="text-muted-foreground">Range</span>
+        {/* Phase 9 UX audit: equal-width segmented control. grid-cols-4
+            gives every pill the exact same width so switching active
+            doesn't nudge its neighbours. min-w-[4rem] floors the cell
+            in case the grid ever lives inside an extra-narrow parent.
+            Divide-x draws a single internal separator line per shadcn's
+            usual segmented style. */}
         <div
           role="group"
           aria-label="Time range"
-          className="inline-flex overflow-hidden rounded border"
+          className="grid w-fit grid-cols-4 divide-x overflow-hidden rounded border"
         >
           {RANGE_OPTIONS.map((opt) => {
             const active = initial.range === opt.value;
@@ -136,7 +142,7 @@ export function HistoryFilters({
                 aria-pressed={active}
                 onClick={() => pushWith({ range: opt.value })}
                 className={cn(
-                  'px-3 py-1 text-sm transition-colors',
+                  'min-w-[4rem] px-3 py-1 text-center text-sm transition-colors',
                   active
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-background text-muted-foreground hover:text-foreground',
