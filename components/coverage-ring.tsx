@@ -28,37 +28,40 @@ export function CoverageRing({ percentage }: { percentage: number }) {
     <div
       role="img"
       aria-label={`Coverage ${clamped}%`}
-      className="relative inline-flex size-28 items-center justify-center"
+      className="inline-flex flex-col items-center gap-2"
     >
-      <svg viewBox="0 0 36 36" className="size-28 -rotate-90" aria-hidden="true">
-        <circle
-          cx="18"
-          cy="18"
-          r="16"
-          fill="none"
-          className="stroke-muted"
-          strokeWidth="3"
-        />
-        <circle
-          cx="18"
-          cy="18"
-          r="16"
-          fill="none"
-          className="stroke-primary motion-safe:transition-[stroke-dashoffset] motion-safe:duration-[600ms] motion-safe:ease-out"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeDasharray="100 100"
-          strokeDashoffset={offset}
-        />
-      </svg>
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display text-2xl font-semibold tabular-nums">
+      <div className="relative inline-flex size-28 items-center justify-center">
+        <svg viewBox="0 0 36 36" className="size-28 -rotate-90" aria-hidden="true">
+          <circle
+            cx="18"
+            cy="18"
+            r="16"
+            fill="none"
+            className="stroke-muted"
+            strokeWidth="3"
+          />
+          <circle
+            cx="18"
+            cy="18"
+            r="16"
+            fill="none"
+            className="stroke-primary motion-safe:transition-[stroke-dashoffset] motion-safe:duration-[600ms] motion-safe:ease-out"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray="100 100"
+            strokeDashoffset={offset}
+          />
+        </svg>
+        {/* Centered percentage — the label lives OUTSIDE the ring now so that
+            wide letter-spacing can't cross the stroke on any percentage. */}
+        <span className="pointer-events-none absolute font-display text-2xl font-semibold tabular-nums">
           {clamped}%
         </span>
-        <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/80">
-          on schedule
-        </span>
       </div>
+      {/* Caption below the ring — immune to ring diameter. Kept tight and warm. */}
+      <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80">
+        on schedule
+      </span>
     </div>
   );
 }
