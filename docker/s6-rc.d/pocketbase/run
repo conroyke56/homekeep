@@ -2,4 +2,5 @@
 exec s6-setuidgid node pocketbase serve \
   --http=127.0.0.1:8090 \
   --dir=/app/data/pb_data \
-  --migrationsDir=/app/pb_migrations
+  --migrationsDir=/app/pb_migrations \
+  --hooksDir=/app/pb_hooks

@@ -81,8 +81,9 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# PB migrations dir (empty in phase 1, phase 2 populates)
-RUN mkdir -p /app/pb_migrations
+# PB migrations + hooks (schema-as-code + lifecycle handlers from Phase 2-6)
+COPY pocketbase/pb_migrations /app/pb_migrations
+COPY pocketbase/pb_hooks /app/pb_hooks
 
 # Runtime configs
 COPY docker/Caddyfile /etc/caddy/Caddyfile
