@@ -91,22 +91,32 @@
 
 ### By Area View
 
-- [ ] **AREA-V-01**: Card per area showing name, icon, coverage %, overdue/due/upcoming counts
-- [ ] **AREA-V-02**: "Whole Home" card pinned to top
-- [ ] **AREA-V-03**: Tapping an area card shows all its tasks
+- [x] **AREA-V-01
+**: Card per area showing name, icon, coverage %, overdue/due/upcoming counts
+- [x] **AREA-V-02
+**: "Whole Home" card pinned to top
+- [x] **AREA-V-03
+**: Tapping an area card shows all its tasks
 
 ### Person View
 
-- [ ] **PERS-01**: Shows tasks effectively assigned to the current user (via cascade)
-- [ ] **PERS-02**: Shows user's completion history
-- [ ] **PERS-03**: Shows personal streak and contribution to household stats
-- [ ] **PERS-04**: Shows notification preferences (editable)
+- [x] **PERS-01
+**: Shows tasks effectively assigned to the current user (via cascade)
+- [x] **PERS-02
+**: Shows user's completion history
+- [x] **PERS-03
+**: Shows personal streak and contribution to household stats
+- [x] **PERS-04
+**: Shows notification preferences (editable)
 
 ### History View
 
-- [ ] **HIST-01**: Timeline of recent completions across the household
-- [ ] **HIST-02**: Filterable by person, area, time range
-- [ ] **HIST-03**: Shows who completed what and when
+- [x] **HIST-01
+**: Timeline of recent completions across the household
+- [x] **HIST-02
+**: Filterable by person, area, time range
+- [x] **HIST-03
+**: Shows who completed what and when
 
 ### Onboarding
 
