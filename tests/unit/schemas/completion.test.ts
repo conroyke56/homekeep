@@ -29,8 +29,13 @@ describe('completionSchema', () => {
   });
 
   test('via defaults to tap when omitted', () => {
-    const { via: _discarded, ...rest } = base;
-    const r = completionSchema.safeParse(rest);
+    const { task_id, completed_by_id, completed_at, notes } = base;
+    const r = completionSchema.safeParse({
+      task_id,
+      completed_by_id,
+      completed_at,
+      notes,
+    });
     expect(r.success).toBe(true);
     if (r.success) {
       expect(r.data.via).toBe('tap');
