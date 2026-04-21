@@ -87,26 +87,30 @@ export function AreaCard({
             )}
           </div>
 
-          <div className="flex items-center gap-3 text-xs">
+          {/* Counter row: each counter is whitespace-nowrap so the label
+              never splits mid-phrase ("1 this\nweek"). On narrow cards the
+              row stacks vertically (flex-col), expanding to a single
+              horizontal row once >= sm. */}
+          <div className="flex flex-col gap-1 text-xs sm:flex-row sm:items-center sm:gap-2">
             <span
               className={cn(
-                'tabular-nums',
+                'whitespace-nowrap tabular-nums',
                 counts.overdue > 0 ? 'text-primary font-medium' : 'text-muted-foreground',
               )}
             >
               {counts.overdue} overdue
             </span>
-            <span className="text-muted-foreground">·</span>
+            <span className="hidden text-muted-foreground sm:inline">·</span>
             <span
               className={cn(
-                'tabular-nums',
+                'whitespace-nowrap tabular-nums',
                 counts.thisWeek > 0 ? 'text-foreground' : 'text-muted-foreground',
               )}
             >
               {counts.thisWeek} this week
             </span>
-            <span className="text-muted-foreground">·</span>
-            <span className="text-muted-foreground tabular-nums">
+            <span className="hidden text-muted-foreground sm:inline">·</span>
+            <span className="whitespace-nowrap tabular-nums text-muted-foreground">
               {counts.upcoming} upcoming
             </span>
           </div>
