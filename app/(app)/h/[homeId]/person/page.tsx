@@ -19,7 +19,8 @@ import {
   type PersonTask,
 } from '@/components/person-task-list';
 import { PersonalStats } from '@/components/personal-stats';
-import { NotificationPrefsPlaceholder } from '@/components/notification-prefs-placeholder';
+import { NotificationPrefsForm } from '@/components/notification-prefs-form';
+import type { NotificationPrefs } from '@/lib/schemas/notification-prefs';
 import { Card, CardContent } from '@/components/ui/card';
 
 /**
@@ -185,6 +186,23 @@ export default async function PersonPage({
     tasksRaw.map((t) => [t.id, t.name as string]),
   );
 
+  // 06-03: fetch the current user's notification preferences so the form
+  // can pre-fill. The users collection viewRule allows self-read; if a
+  // field is missing (pre-migration row) we coerce to the product default.
+  const userRecord = await pb.collection('users').getOne(authId, {
+    fields:
+      'id,ntfy_topic,notify_overdue,notify_assigned,notify_partner_completed,notify_weekly_summary,weekly_summary_day',
+  });
+  const initialPrefs: NotificationPrefs = {
+    ntfy_topic: (userRecord.ntfy_topic as string) || '',
+    notify_overdue: Boolean(userRecord.notify_overdue),
+    notify_assigned: Boolean(userRecord.notify_assigned),
+    notify_partner_completed: Boolean(userRecord.notify_partner_completed),
+    notify_weekly_summary: Boolean(userRecord.notify_weekly_summary),
+    weekly_summary_day:
+      userRecord.weekly_summary_day === 'monday' ? 'monday' : 'sunday',
+  };
+
   return (
     <div
       className="mx-auto max-w-4xl space-y-6 p-6"
@@ -283,9 +301,9 @@ export default async function PersonPage({
         />
       </section>
 
-      {/* Section 4 — Notifications (stub, Phase 6 owns the real form) */}
+      {/* Section 4 — Notifications (06-03: real form replaces Phase 5 stub) */}
       <section className="space-y-3" data-section="notifications">
-        <NotificationPrefsPlaceholder />
+        <NotificationPrefsForm initialPrefs={initialPrefs} />
       </section>
     </div>
   );

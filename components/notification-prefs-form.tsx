@@ -1,0 +1,263 @@
+'use client';
+
+import { useActionState, useEffect, useRef } from 'react';
+import { useFormStatus } from 'react-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
+import {
+  notificationPrefsSchema,
+  type NotificationPrefs,
+} from '@/lib/schemas/notification-prefs';
+import { updateNotificationPrefsAction } from '@/lib/actions/notification-prefs';
+import type { ActionState } from '@/lib/schemas/auth';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+
+/**
+ * NotificationPrefsForm (06-03 Task 1, D-15, NOTF-01 / 05 / 06).
+ *
+ * Real replacement for the Phase 5 placeholder. Wires react-hook-form
+ * (client-side zod validation + pattern parity with Phase 2/5 forms)
+ * onto the `updateNotificationPrefsAction` Server Action via the
+ * Next.js 16 `useActionState` + `<form action>` pattern.
+ *
+ * Fields:
+ *   1. ntfy_topic       — text input (4-64 URL-safe chars, empty = disabled).
+ *   2. notify_overdue   — checkbox.
+ *   3. notify_assigned  — checkbox.
+ *   4. notify_partner_completed — checkbox.
+ *   5. notify_weekly_summary    — checkbox (toggles reveal of #6).
+ *   6. weekly_summary_day       — native <select> sunday|monday (hidden when #5 off).
+ *
+ * Root attrs (E2E anchors):
+ *   data-notification-prefs-form — replaces the old placeholder attr.
+ *   data-notifications-ready="true" — flipped post-mount so E2E can poll.
+ *
+ * RHF errors merge with server-side `state.fieldErrors` (client wins on
+ * display). Toast success/error driven by the action's `ActionState`
+ * return (same contract as every other form in the app).
+ */
+
+const INITIAL: ActionState = { ok: false };
+
+export function NotificationPrefsForm({
+  initialPrefs,
+}: {
+  initialPrefs: NotificationPrefs;
+}) {
+  const [state, formAction] = useActionState<ActionState, FormData>(
+    updateNotificationPrefsAction,
+    INITIAL,
+  );
+
+  const {
+    register,
+    watch,
+    formState: { errors },
+  } = useForm<NotificationPrefs>({
+    resolver: zodResolver(notificationPrefsSchema),
+    mode: 'onBlur',
+    defaultValues: initialPrefs,
+  });
+
+  // Toast the most recent server response. We key on the state object
+  // identity so each dispatch fires exactly one toast.
+  const lastStateRef = useRef<ActionState | null>(null);
+  useEffect(() => {
+    if (state === lastStateRef.current) return;
+    lastStateRef.current = state;
+    if (state.ok === true) {
+      toast.success('Notification preferences saved');
+    } else if (state.ok === false && state.formError) {
+      toast.error(state.formError);
+    }
+  }, [state]);
+
+  const weeklyOn = watch('notify_weekly_summary');
+
+  const serverFieldErrors =
+    state.ok === false ? state.fieldErrors : undefined;
+  const serverFormError = state.ok === false ? state.formError : undefined;
+
+  const topicError =
+    errors.ntfy_topic?.message ?? serverFieldErrors?.ntfy_topic?.[0];
+  const dayError =
+    errors.weekly_summary_day?.message ??
+    serverFieldErrors?.weekly_summary_day?.[0];
+
+  return (
+    <Card
+      data-notification-prefs-form
+      data-notifications-ready="true"
+      data-state-ok={state.ok === true ? 'true' : 'false'}
+    >
+      <CardHeader>
+        <CardTitle>Notifications</CardTitle>
+        <CardDescription>
+          Set up a personal ntfy topic and choose which pushes you want.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form action={formAction} className="space-y-5" noValidate>
+          <div className="space-y-1.5" data-field="ntfy-topic">
+            <Label htmlFor="ntfy-topic">Your ntfy topic</Label>
+            <Input
+              id="ntfy-topic"
+              type="text"
+              placeholder="homekeep-alice-a7b3c9"
+              aria-invalid={!!topicError}
+              {...register('ntfy_topic')}
+            />
+            <p className="text-xs text-muted-foreground">
+              Lowercase letters, numbers, dashes, underscores. 4-64
+              characters. Leave blank to disable all push notifications.
+              Test with:{' '}
+              <code className="rounded bg-muted px-1">
+                curl -d &quot;hi&quot; https://ntfy.sh/your-topic
+              </code>
+              .
+            </p>
+            {topicError && (
+              <p
+                className="text-sm text-destructive"
+                data-error-ntfy-topic
+              >
+                {topicError}
+              </p>
+            )}
+          </div>
+
+          <div
+            className="flex items-start gap-3"
+            data-field="notify-overdue"
+          >
+            <input
+              id="notify-overdue"
+              type="checkbox"
+              className="mt-1 size-4"
+              {...register('notify_overdue')}
+            />
+            <div className="flex-1">
+              <Label htmlFor="notify-overdue" className="font-normal">
+                Notify me when a task becomes overdue
+              </Label>
+            </div>
+          </div>
+
+          <div
+            className="flex items-start gap-3"
+            data-field="notify-assigned"
+          >
+            <input
+              id="notify-assigned"
+              type="checkbox"
+              className="mt-1 size-4"
+              {...register('notify_assigned')}
+            />
+            <div className="flex-1">
+              <Label htmlFor="notify-assigned" className="font-normal">
+                Notify me when a task is assigned to me
+              </Label>
+            </div>
+          </div>
+
+          <div
+            className="flex items-start gap-3"
+            data-field="notify-partner-completed"
+          >
+            <input
+              id="notify-partner-completed"
+              type="checkbox"
+              className="mt-1 size-4"
+              {...register('notify_partner_completed')}
+            />
+            <div className="flex-1">
+              <Label
+                htmlFor="notify-partner-completed"
+                className="font-normal"
+              >
+                Notify me when a household member completes a task
+              </Label>
+            </div>
+          </div>
+
+          <div
+            className="flex items-start gap-3"
+            data-field="notify-weekly-summary"
+          >
+            <input
+              id="notify-weekly-summary"
+              type="checkbox"
+              className="mt-1 size-4"
+              {...register('notify_weekly_summary')}
+            />
+            <div className="flex-1">
+              <Label
+                htmlFor="notify-weekly-summary"
+                className="font-normal"
+              >
+                Send me a weekly summary
+              </Label>
+            </div>
+          </div>
+
+          {weeklyOn && (
+            <div
+              className="space-y-1.5 pl-7"
+              data-field="weekly-summary-day"
+            >
+              <Label htmlFor="weekly-summary-day">Weekly summary day</Label>
+              <select
+                id="weekly-summary-day"
+                aria-invalid={!!dayError}
+                {...register('weekly_summary_day')}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="sunday">Sunday</option>
+                <option value="monday">Monday</option>
+              </select>
+              {dayError && (
+                <p
+                  className="text-sm text-destructive"
+                  data-error-weekly-summary-day
+                >
+                  {dayError}
+                </p>
+              )}
+            </div>
+          )}
+
+          {serverFormError && (
+            <p
+              className="text-sm text-destructive"
+              role="alert"
+              data-error-form
+            >
+              {serverFormError}
+            </p>
+          )}
+
+          <SaveButton />
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SaveButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending}>
+      {pending ? 'Saving…' : 'Save'}
+    </Button>
+  );
+}

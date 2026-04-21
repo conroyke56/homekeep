@@ -345,16 +345,18 @@ test.describe.serial('Phase 5 Views (D-19) — Suite C: person', () => {
     const streakCard = page.locator('[data-streak-count]');
     await expect(streakCard).toHaveAttribute('data-streak-count', '1');
 
-    // Notifications placeholder present with Phase 6 copy.
-    const prefs = page.locator('[data-notification-prefs-placeholder]');
+    // 06-03: placeholder replaced by real form — assert the new anchor.
+    const prefs = page.locator('[data-notification-prefs-form]');
     await expect(prefs).toBeVisible();
-    await expect(prefs).toContainText(/coming in Phase 6/i);
+    await expect(
+      page.locator('[data-notification-prefs-placeholder]'),
+    ).toHaveCount(0);
 
-    // Disabled form fields present.
-    const disabledTopic = prefs.locator('input[name="ntfy_topic"]');
-    await expect(disabledTopic).toBeDisabled();
-    const disabledEmail = prefs.locator('input[name="email_summary"]');
-    await expect(disabledEmail).toBeDisabled();
+    // Topic + at least one toggle visible.
+    await expect(prefs.locator('[data-field=ntfy-topic] input')).toBeVisible();
+    await expect(
+      prefs.locator('[data-field=notify-overdue] input[type=checkbox]'),
+    ).toBeVisible();
   });
 });
 
