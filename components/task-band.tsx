@@ -66,7 +66,9 @@ export function TaskBand({
         data-band={variant ?? label.toLowerCase().replace(/\s+/g, '-')}
       >
         <CardHeader>
-          <CardTitle>{label}</CardTitle>
+          <CardTitle className="font-display text-lg font-medium text-foreground/85">
+            {label}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {tasks.map((t) => (
@@ -121,7 +123,9 @@ export function TaskBand({
   return (
     <Card data-band={variant ?? label.toLowerCase().replace(/\s+/g, '-')}>
       <CardHeader>
-        <CardTitle>{label}</CardTitle>
+        <CardTitle className="font-display text-lg font-medium text-foreground/85">
+          {label}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {orderedKeys.map((key) => {

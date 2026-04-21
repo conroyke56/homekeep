@@ -81,7 +81,9 @@ export function HorizonStrip({
   return (
     <Card data-band="horizon">
       <CardHeader>
-        <CardTitle>Horizon</CardTitle>
+        <CardTitle className="font-display text-lg font-medium text-foreground/85">
+          Horizon
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {emptyHorizon ? (
