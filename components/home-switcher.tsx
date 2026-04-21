@@ -63,17 +63,33 @@ export function HomeSwitcher({
     );
   }
 
+  // Single-home users don't need a switcher — the home name is already
+  // shown as the h1 on the page body, and exposing a dropdown that
+  // just toggles open/closed on a single item is pure noise (Phase 9
+  // UX audit finding). Rendering `null` keeps the top-nav flex row
+  // tidy; the AccountMenu on the right still provides "Create another
+  // home" via the /h route, and the /h empty state CTA covers the
+  // zero-homes case above.
+  if (homes.length === 1) {
+    return null;
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
-          className="gap-1"
+          className="gap-1 max-w-[12rem]"
           disabled={isPending}
         >
-          {current?.name ?? 'Select home'}
-          <ChevronDown className="size-4" />
+          {/* Multi-home: show the CURRENT home's name (not the generic
+              "Select home" which made it look like nothing was picked).
+              Truncate long names — the dropdown lists the full text. */}
+          <span className="truncate">
+            {current?.name ?? homes[0]?.name ?? 'Your homes'}
+          </span>
+          <ChevronDown className="size-4 shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">

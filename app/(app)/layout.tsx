@@ -98,12 +98,19 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-screen">
+      {/* Mobile nav density (Phase 9 UX audit): on small screens the
+          in-page h1 already identifies the home, so we hide the
+          wordmark + switcher in the top bar and leave only the
+          AccountMenu. Desktop keeps the full "HomeKeep [switcher]
+          … AccountMenu" header for quick navigation. */}
       <header className="flex items-center justify-between gap-3 border-b p-3">
         <div className="flex items-center gap-3">
-          <Link href="/h" className="font-semibold">
+          <Link href="/h" className="hidden font-semibold sm:inline">
             HomeKeep
           </Link>
-          <HomeSwitcher homes={homes} currentHomeId={currentHomeId} />
+          <div className="hidden sm:block">
+            <HomeSwitcher homes={homes} currentHomeId={currentHomeId} />
+          </div>
         </div>
         <AccountMenu userName={userName} ownedHomeIds={ownedHomeIds} />
       </header>
