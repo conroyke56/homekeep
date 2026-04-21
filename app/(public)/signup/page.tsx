@@ -36,8 +36,17 @@ export default async function SignupPage({
         </div>
         <SignupForm next={next} />
         <p className="text-sm text-muted-foreground">
+          {/* Phase 9 UX audit: the warm primary (hsl 30 45% 65%) sits
+              right on the 4.5:1 edge against the cream card background,
+              so color alone isn't a reliable signal that this is a
+              link. Add a persistent underline with underline-offset-2
+              (kept subtle) so the affordance is legible to anyone who
+              can't distinguish the hue from body copy. */}
           Already have an account?{' '}
-          <Link href={loginHref} className="text-primary hover:underline">
+          <Link
+            href={loginHref}
+            className="text-primary underline underline-offset-2 hover:text-primary/80"
+          >
             Log in
           </Link>
         </p>

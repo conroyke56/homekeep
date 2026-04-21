@@ -24,7 +24,12 @@ export default async function LoginPage({
           </Link>
           <span>
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="text-primary hover:underline">
+            {/* Mirror the Phase 9 signup-page fix: persistent underline
+                so the link is identifiable beyond color alone. */}
+            <Link
+              href="/signup"
+              className="text-primary underline underline-offset-2 hover:text-primary/80"
+            >
               Create one
             </Link>
           </span>

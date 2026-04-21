@@ -100,9 +100,11 @@ export function HorizonStrip({
               const count = (buckets.get(m.key) ?? []).length;
               const isCurrent = m.key === currentMonthKey;
               // Populated months stay at full opacity so the eye
-              // lands on them; empty months dim to 55% so the strip
-              // reads as "activity graph" not a full calendar.
-              const labelOpacity = count > 0 ? 'opacity-100' : 'opacity-55';
+              // lands on them; empty months dim to 65% — just visible
+              // enough to stay scannable as context without competing
+              // with the populated cells. Phase 9 UX audit bumped from
+              // 55% (too ghosted) to 65%.
+              const labelOpacity = count > 0 ? 'opacity-100' : 'opacity-65';
               return (
                 <button
                   key={m.key}
