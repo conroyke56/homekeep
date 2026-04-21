@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Plus } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { createServerClient } from '@/lib/pocketbase-server';
@@ -13,15 +14,14 @@ import {
 import { Button } from '@/components/ui/button';
 
 /**
- * /h/[homeId] — home dashboard (02-04 stub; 02-05 adds task counts).
+ * /h/[homeId] — home dashboard.
  *
- * For this plan:
- *   - Fetches the home + its areas (sorted by sort_order, name tiebreak).
- *   - Renders area tiles (icon + color swatch + name) each linking to
- *     /h/[homeId]/areas/[areaId].
- *   - "Manage areas" button jumps to the full reorder/manage page.
+ * 02-04 scope: area tiles (icon + color + name) linking to /areas/[areaId].
+ * 02-05 scope: + per-area task count (derived from pb.collection('tasks')
+ *              grouped by area_id, archived=false only) + "+ Add task"
+ *              quick-link at the top of the page.
  *
- * Next 16 async params contract: `params: Promise<{ homeId: string }>`.
+ * Next 16 async params contract: params: Promise<{ homeId }>.
  */
 
 function kebabToPascal(s: string): string {
@@ -43,16 +43,31 @@ export default async function HomeDashboardPage({
 
   let home;
   try {
-    home = await pb.collection('homes').getOne(homeId, { fields: 'id,name,address' });
+    home = await pb.collection('homes').getOne(homeId, {
+      fields: 'id,name,address',
+    });
   } catch {
     notFound();
   }
 
-  const areas = await pb.collection('areas').getFullList({
-    filter: `home_id = "${homeId}"`,
-    sort: 'sort_order,name',
-    fields: 'id,name,icon,color,is_whole_home_system,sort_order',
-  });
+  const [areas, allTasks] = await Promise.all([
+    pb.collection('areas').getFullList({
+      filter: `home_id = "${homeId}"`,
+      sort: 'sort_order,name',
+      fields: 'id,name,icon,color,is_whole_home_system,sort_order',
+    }),
+    pb.collection('tasks').getFullList({
+      filter: `home_id = "${homeId}" && archived = false`,
+      fields: 'id,area_id',
+    }),
+  ]);
+
+  // Group active tasks by area_id for the per-tile count.
+  const countByArea = new Map<string, number>();
+  for (const t of allTasks) {
+    const aid = t.area_id as string;
+    countByArea.set(aid, (countByArea.get(aid) ?? 0) + 1);
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6">
@@ -65,9 +80,16 @@ export default async function HomeDashboardPage({
             </p>
           ) : null}
         </div>
-        <Button asChild variant="outline">
-          <Link href={`/h/${homeId}/areas`}>Manage areas</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild>
+            <Link href={`/h/${homeId}/tasks/new`}>
+              <Plus className="mr-1 size-4" /> Add task
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href={`/h/${homeId}/areas`}>Manage areas</Link>
+          </Button>
+        </div>
       </header>
 
       <section className="space-y-3">
@@ -77,6 +99,7 @@ export default async function HomeDashboardPage({
             const Icon =
               IconModule[kebabToPascal(String(a.icon ?? 'home'))] ??
               Icons.HelpCircle;
+            const count = countByArea.get(a.id) ?? 0;
             return (
               <li key={a.id}>
                 <Link href={`/h/${homeId}/areas/${a.id}`}>
@@ -92,8 +115,9 @@ export default async function HomeDashboardPage({
                       <div className="flex-1 truncate">
                         <div className="font-medium">{a.name as string}</div>
                         <div className="text-xs text-muted-foreground">
-                          {/* 02-05 fills real task counts here. */}
-                          Tasks coming in 02-05
+                          {count === 0
+                            ? 'No tasks yet'
+                            : `${count} active task${count === 1 ? '' : 's'}`}
                         </div>
                       </div>
                     </div>
@@ -110,13 +134,15 @@ export default async function HomeDashboardPage({
           <CardHeader>
             <CardTitle>Tasks</CardTitle>
             <CardDescription>
-              Task management lands in 02-05 (three-band view in Phase 3).
+              {allTasks.length === 0
+                ? 'No active tasks yet — add your first one to get started.'
+                : `${allTasks.length} active task${allTasks.length === 1 ? '' : 's'} across ${areas.length} area${areas.length === 1 ? '' : 's'}.`}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              This home has {areas.length} area{areas.length === 1 ? '' : 's'}{' '}
-              ready for tasks.
+              The three-band “due-soon / due-today / overdue” view lands in
+              Phase 3. For now, open an area to see its tasks.
             </p>
           </CardContent>
         </Card>
