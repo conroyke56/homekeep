@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-04-21T03:37:37.828Z"
+status: verifying
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-04-21T04:09:48.497Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 8
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 18
-  completed_plans: 18
+  completed_plans: 19
   percent: 100
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 
 Phase: 4 (Collaboration) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-21
 
 Progress: [██████████] 100%
@@ -70,6 +70,7 @@ Progress: [██████████] 100%
 | Phase 03 P03-03 | 30min | 4 tasks | 10 files |
 | Phase 04 P04-01 | 7min | 2 tasks | 7 files |
 | Phase Phase 04 PP04-02 | 13min | 3 tasks | 21 files |
+| Phase 04 P03 | 25min | 3 tasks | 30 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,12 @@ Recent decisions affecting current work:
 - 04-02: acceptInvite uses admin batch (NOT split with authed client) — attribution preserved via server-set accepted_by_id; simpler atomicity
 - 04-02: assigned_to_id validation: trust-the-rule (Wave 3 resolveAssignee handles orphan assignees) rather than explicit assertMembership on assignee
 - 04-02: Port 18094 for invites-roundtrip test (plan said 18093 but 04-01 already claimed 18093)
+- 04-03: resolveAssignee as pure fn + discriminated union — Map-backed member lookup, O(1) per cascade
+- 04-03: AvatarCircle primitive over @radix-ui/react-avatar — pure CSS variants, zero new deps
+- 04-03: users.viewRule relaxed via double-hop back-relation so co-members can expand each other (migration 1714953603)
+- 04-03: acceptInvite drops revalidatePath — Next 16 rejects revalidate-during-RSC-render; redirect handles fresh render
+- 04-03: Playwright globalSetup shells to 'pocketbase superuser upsert' CLI — PB 0.37 REST refuses unauthed superuser creates
+- 04-03: LeaveHomeMenuItem renders raw <button> (not DropdownMenuItem) to avoid Radix auto-close dismissing Dialog
 
 ### Pending Todos
 
@@ -173,8 +180,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-21T03:37:24.813Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-04-21T04:09:38.388Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None
 
 **Planned Phase:** 4 (Collaboration) — 3 plans — 2026-04-21T03:08:12.524Z

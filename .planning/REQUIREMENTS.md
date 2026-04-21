@@ -50,9 +50,12 @@
 
 - [x] **TASK-01
 **: User can create a task with name, frequency (days), area, optional notes
-- [ ] **TASK-02**: User can assign a task to a specific member (overrides area default)
-- [ ] **TASK-03**: Cascading assignment resolves: task assignee → area default → "Anyone"
-- [ ] **TASK-04**: UI shows effective assignee with icon distinguishing inherited vs overridden
+- [x] **TASK-02
+**: User can assign a task to a specific member (overrides area default)
+- [x] **TASK-03
+**: Cascading assignment resolves: task assignee → area default → "Anyone"
+- [x] **TASK-04
+**: UI shows effective assignee with icon distinguishing inherited vs overridden
 - [x] **TASK-05
 **: User can set schedule mode per task (cycle or anchored, default: cycle)
 - [x] **TASK-06
