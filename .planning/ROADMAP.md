@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Scaffold & Infrastructure** - Docker container with Next.js + PocketBase running, dev environment, compose files, health endpoint (completed 2026-04-20)
 - [x] **Phase 2: Auth & Core Data** - Single user can sign up, create homes/areas/tasks, and manage their data (completed 2026-04-21)
-- [ ] **Phase 2.1: Deploy Checkpoint** (INSERTED) - Build local image + docker compose up on VPS port 80 for live preview at http://46.62.151.57/
+- [x] **Phase 2.1: Deploy Checkpoint** (INSERTED) - Build local image + docker compose up on VPS port 3000 for live preview at http://46.62.151.57:3000/ (completed 2026-04-21)
 - [ ] **Phase 3: Core Loop** - Three-band main view with task completion, coverage ring, and early-completion guard
 - [ ] **Phase 4: Collaboration** - Share homes via invite links, manage members, cascading task assignment
 - [ ] **Phase 5: Views & Onboarding** - By Area, Person, and History views plus seed task library wizard
