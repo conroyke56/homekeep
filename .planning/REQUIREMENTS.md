@@ -11,7 +11,8 @@
 **: User can sign up with email and password
 - [x] **AUTH-02
 **: User can log in and session persists across browser refresh
-- [ ] **AUTH-03**: User can log out from any page
+- [x] **AUTH-03
+**: User can log out from any page
 - [x] **AUTH-04
 **: User can reset password via email link (PocketBase built-in)
 
@@ -185,7 +186,7 @@
 |-------------|-------|--------|
 | AUTH-01 | Phase 2 | Pending |
 | AUTH-02 | Phase 2 | Pending |
-| AUTH-03 | Phase 2 | Pending |
+| AUTH-03 | Phase 2 | Complete |
 | AUTH-04 | Phase 2 | Pending |
 | HOME-01 | Phase 2 | Pending |
 | HOME-02 | Phase 2 | Pending |

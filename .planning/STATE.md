@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-04-20T23:45:39.183Z"
-last_activity: 2026-04-20
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-04-21T00:01:22.021Z"
+last_activity: 2026-04-21
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 1
   total_plans: 12
-  completed_plans: 9
-  percent: 75
+  completed_plans: 10
+  percent: 83
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 ## Current Position
 
 Phase: 2 (Auth & Core Data) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
-Last activity: 2026-04-20
+Last activity: 2026-04-21
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [████████░░] 75%
 | Phase 01 P01-07 | 2min | 1 tasks | 1 files |
 | Phase 02 P02-01 | 14min | 2 tasks | 9 files |
 | Phase 02 P02 | 8min | 2 tasks | 21 files |
+| Phase 02 P02-03 | 7min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,13 @@ Recent decisions affecting current work:
 - 02-02: Removed bogus @import 'shadcn/tailwind.css' (no such package published); tokens live in :root
 - 02-02: Test hygiene — clear jsdom localStorage in beforeEach so PB LocalAuthStore doesn't leak authStore state across tests
 - 02-02: lib/pocketbase.ts kept as 13-line back-compat shim so Phase 1 tests/unit/pocketbase.test.ts stays green — new code uses the split factories
+- 02-03: Cookie options driven by NODE_ENV for secure flag (D-03 + Pitfall 3) — LAN-HTTP production has Secure OFF; SameSite=Lax still mitigates CSRF; Phase 7 HTTPS flips on automatically
+- 02-03: proxy.ts (Next 16 rename, NOT middleware.ts) with presence-check only — full JWT validation delegated to PB server-side; (app)/layout.tsx adds defense-in-depth via pb.authStore.isValid
+- 02-03: safeNext() enforces /-prefix same-origin + forbids // and ://, implementing T-02-03-08 mitigation in-plan rather than deferring
+- 02-03: requestResetAction always returns ok on user-not-found; only SMTP-disabled 400 surfaces the 'Password reset unavailable' message per D-02 (T-02-03-03 email-enumeration)
+- 02-03: app/page.tsx single landing file; no app/(public)/page.tsx (would error 'two parallel pages same path' — route groups don't create segments)
+- 02-03: Logout is DropdownMenuItem asChild wrapping a form whose action={logoutAction} — works without JS, participates in Next 16 cookie-clear+redirect single-response flow (D-07)
+- 02-03: signupAction email-taken detection covers both PB 0.23+ 'validation_not_unique' and older 'validation_invalid_email' codes for forward/backward compat
 
 ### Pending Todos
 
@@ -124,8 +132,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-20T23:45:39.166Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-04-21T00:01:21.998Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
 
 **Planned Phase:** 2 (Auth & Core Data) — 5 plans — 2026-04-20T23:14:37.047Z
