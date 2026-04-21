@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { switchHome } from '@/lib/actions/homes';
 
-type HomeEntry = { id: string; name: string };
+type HomeEntry = { id: string; name: string; role?: 'owner' | 'member' };
 
 /**
  * HomeSwitcher — top-left nav affordance on every /h/* route (HOME-04).
@@ -86,7 +86,14 @@ export function HomeSwitcher({
             onSelect={() => selectHome(h.id)}
             className="flex items-center justify-between"
           >
-            <span className="truncate">{h.name}</span>
+            <span className="flex items-center gap-1.5 truncate">
+              <span className="truncate">{h.name}</span>
+              {h.role === 'owner' && (
+                <span className="rounded border border-muted-foreground/30 px-1 text-[9px] uppercase tracking-wide text-muted-foreground">
+                  Owner
+                </span>
+              )}
+            </span>
             {h.id === currentHomeId && (
               <Check className="size-4 text-primary" />
             )}

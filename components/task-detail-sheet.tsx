@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { archiveTask } from '@/lib/actions/tasks';
+import type { EffectiveAssignee } from '@/lib/assignment';
+import { AssigneeDisplay } from '@/components/assignee-display';
 
 /**
  * TaskDetailSheet (03-03 Plan, D-17, VIEW-06).
@@ -65,6 +67,8 @@ export function TaskDetailSheet({
     anchor_date: string | null;
     notes: string;
     area_name?: string;
+    /** 04-03 D-10 + TASK-04: resolved cascade from the Server Component. */
+    effective?: EffectiveAssignee;
   } | null;
   recentCompletions: Array<{ id: string; completed_at: string }>;
   timezone: string;
@@ -110,6 +114,15 @@ export function TaskDetailSheet({
           {task.notes ? (
             <p className="text-sm text-muted-foreground">{task.notes}</p>
           ) : null}
+
+          {task.effective && (
+            <section data-testid="detail-assignee">
+              <h3 className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
+                Assigned to
+              </h3>
+              <AssigneeDisplay effective={task.effective} size="md" />
+            </section>
+          )}
 
           <section>
             <h3 className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">

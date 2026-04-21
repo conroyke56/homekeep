@@ -33,7 +33,7 @@ export default async function TaskDetailPage({
   try {
     task = await pb.collection('tasks').getOne(taskId, {
       fields:
-        'id,home_id,area_id,name,description,frequency_days,schedule_mode,anchor_date,notes,archived,archived_at',
+        'id,home_id,area_id,name,description,frequency_days,schedule_mode,anchor_date,notes,archived,archived_at,assigned_to_id',
     });
   } catch {
     notFound();
@@ -54,6 +54,28 @@ export default async function TaskDetailPage({
     id: a.id,
     name: (a.name as string) ?? '',
   }));
+
+  // 04-03 TASK-02: members for the assignee dropdown (see new/page.tsx).
+  const memberRows = await pb.collection('home_members').getFullList({
+    filter: `home_id = "${homeId}"`,
+    expand: 'user_id',
+    fields:
+      'id,user_id,expand.user_id.id,expand.user_id.name,expand.user_id.email',
+  });
+  const members = memberRows
+    .map((r) => {
+      const u = (
+        r.expand as
+          | Record<string, { id?: string; name?: string; email?: string }>
+          | undefined
+      )?.user_id;
+      if (!u?.id) return null;
+      return {
+        id: u.id,
+        name: (u.name as string) || (u.email as string) || 'Member',
+      };
+    })
+    .filter((m): m is { id: string; name: string } => m !== null);
 
   const archived = Boolean(task.archived);
 
@@ -101,6 +123,7 @@ export default async function TaskDetailPage({
               mode="edit"
               homeId={homeId}
               areas={areas}
+              members={members}
               task={{
                 id: task.id,
                 home_id: String(task.home_id),
@@ -116,6 +139,11 @@ export default async function TaskDetailPage({
                     ? (task.anchor_date as string)
                     : null,
                 notes: String(task.notes ?? ''),
+                assigned_to_id:
+                  typeof task.assigned_to_id === 'string' &&
+                  task.assigned_to_id.length > 0
+                    ? (task.assigned_to_id as string)
+                    : null,
               }}
             />
           )}

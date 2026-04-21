@@ -76,6 +76,11 @@ export function TaskBand({
                 id: t.id,
                 name: (t as ClassifiedTask & { name: string }).name,
                 frequency_days: t.frequency_days,
+                effective: (
+                  t as ClassifiedTask & {
+                    effective?: import('@/lib/assignment').EffectiveAssignee;
+                  }
+                ).effective,
               }}
               onComplete={onComplete}
               onDetail={onDetail}

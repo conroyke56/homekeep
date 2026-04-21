@@ -50,6 +50,30 @@ export default async function NewTaskPage({
     name: (a.name as string) ?? '',
   }));
 
+  // 04-03 TASK-02: fetch home members so the TaskForm assignee dropdown
+  // can render member options. Empty list is safe — the form shows only
+  // the "Use area default / Anyone" option.
+  const memberRows = await pb.collection('home_members').getFullList({
+    filter: `home_id = "${homeId}"`,
+    expand: 'user_id',
+    fields:
+      'id,user_id,expand.user_id.id,expand.user_id.name,expand.user_id.email',
+  });
+  const members = memberRows
+    .map((r) => {
+      const u = (
+        r.expand as
+          | Record<string, { id?: string; name?: string; email?: string }>
+          | undefined
+      )?.user_id;
+      if (!u?.id) return null;
+      return {
+        id: u.id,
+        name: (u.name as string) || (u.email as string) || 'Member',
+      };
+    })
+    .filter((m): m is { id: string; name: string } => m !== null);
+
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-6">
       <Button asChild variant="ghost" size="sm">
@@ -68,6 +92,7 @@ export default async function NewTaskPage({
             mode="create"
             homeId={homeId}
             areas={areas}
+            members={members}
             preselectedAreaId={areaId}
           />
         </CardContent>

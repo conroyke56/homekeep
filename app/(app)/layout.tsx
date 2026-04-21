@@ -60,18 +60,41 @@ export default async function AppLayout({
       ? lastViewedRaw
       : null;
 
-  // SAFE filter — userId is from the trusted authStore, not client input
-  // (RESEARCH §Security Domain line 1766). Future user-input filters must
-  // use pb.filter(). Cast to HomeEntry-compatible shape for the client.
-  const homesRaw = await pb.collection('homes').getFullList({
-    filter: `owner_id = "${userId}"`,
-    sort: 'name',
-    fields: 'id,name',
+  // 04-03 RESEARCH Pattern 11: swap the Phase 2 homes-by-owner query for
+  // a home_members-by-user query + expand. Same SAFE userId (authStore-
+  // derived, not client input). Returns homes the user is a member of,
+  // regardless of ownership role. Owner badge is derived from r.role.
+  const membershipRows = await pb.collection('home_members').getFullList({
+    filter: `user_id = "${userId}"`,
+    sort: 'home_id.name',
+    fields:
+      'id,role,home_id,expand.home_id.id,expand.home_id.name,expand.home_id.owner_id',
+    expand: 'home_id',
   });
-  const homes = homesRaw.map((h) => ({
-    id: h.id,
-    name: (h.name as string) ?? '',
-  }));
+  type HomeEntry = {
+    id: string;
+    name: string;
+    role: 'owner' | 'member';
+  };
+  const homes: HomeEntry[] = membershipRows
+    .map((r) => {
+      const home = (
+        r.expand as Record<string, { id?: string; name?: string }> | undefined
+      )?.home_id;
+      if (!home?.id) return null;
+      return {
+        id: home.id,
+        name: (home.name as string) ?? '',
+        role: r.role as 'owner' | 'member',
+      };
+    })
+    .filter((h): h is HomeEntry => h !== null);
+
+  // Owned home ids drive the AccountMenu's conditional Leave Home item.
+  // The client derives the current homeId from usePathname().
+  const ownedHomeIds = homes
+    .filter((h) => h.role === 'owner')
+    .map((h) => h.id);
 
   return (
     <div className="min-h-screen">
@@ -82,7 +105,7 @@ export default async function AppLayout({
           </Link>
           <HomeSwitcher homes={homes} currentHomeId={currentHomeId} />
         </div>
-        <AccountMenu userName={userName} />
+        <AccountMenu userName={userName} ownedHomeIds={ownedHomeIds} />
       </header>
       <main>{children}</main>
     </div>

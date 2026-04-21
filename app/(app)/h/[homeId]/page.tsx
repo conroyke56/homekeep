@@ -5,6 +5,8 @@ import {
   type CompletionRecord,
 } from '@/lib/completions';
 import { BandView, type TaskWithName } from '@/components/band-view';
+import { AvatarStack } from '@/components/avatar-stack';
+import { resolveAssignee, type Member } from '@/lib/assignment';
 
 /**
  * /h/[homeId] — Phase 3 three-band dashboard (D-11, D-18, D-19).
@@ -46,11 +48,51 @@ export default async function HomeDashboardPage({
     notFound();
   }
 
+  // 04-03: fetch home members + areas (with default_assignee_id) so the
+  // cascading resolveAssignee can run server-side. Also drives the
+  // AvatarStack in the dashboard header.
+  const memberRows = await pb.collection('home_members').getFullList({
+    filter: `home_id = "${homeId}"`,
+    expand: 'user_id',
+    fields:
+      'id,role,user_id,expand.user_id.id,expand.user_id.name,expand.user_id.email',
+  });
+  const members: Member[] = memberRows
+    .map((r): Member | null => {
+      const u = (
+        r.expand as
+          | Record<string, { id?: string; name?: string; email?: string }>
+          | undefined
+      )?.user_id;
+      if (!u?.id) return null;
+      return {
+        id: u.id,
+        name: (u.name as string) || (u.email as string) || 'Member',
+        email: u.email as string | undefined,
+        role: r.role as 'owner' | 'member',
+      };
+    })
+    .filter((m): m is Member => m !== null);
+
+  const areasRaw = await pb.collection('areas').getFullList({
+    filter: `home_id = "${homeId}"`,
+    fields: 'id,default_assignee_id',
+  });
+  const areaById = new Map(
+    areasRaw.map((a) => [
+      a.id as string,
+      {
+        id: a.id as string,
+        default_assignee_id: (a.default_assignee_id as string) || null,
+      },
+    ]),
+  );
+
   const tasks = await pb.collection('tasks').getFullList({
     filter: `home_id = "${homeId}" && archived = false`,
     expand: 'area_id',
     fields:
-      'id,name,frequency_days,schedule_mode,anchor_date,archived,created,icon,color,area_id,notes,expand.area_id.name',
+      'id,name,frequency_days,schedule_mode,anchor_date,archived,created,icon,color,area_id,notes,assigned_to_id,expand.area_id.name',
   });
 
   const now = new Date();
@@ -60,24 +102,37 @@ export default async function HomeDashboardPage({
   // Map PB records -> BandView's TaskWithName shape. The expand shape
   // for `area_id` is Record<string, RecordModel>, so we narrow it to
   // the name projection we requested via `fields`.
-  const mappedTasks: TaskWithName[] = tasks.map((t) => ({
-    id: t.id,
-    name: t.name as string,
-    created: t.created as string,
-    archived: Boolean(t.archived),
-    frequency_days: t.frequency_days as number,
-    schedule_mode:
-      (t.schedule_mode as string) === 'anchored' ? 'anchored' : 'cycle',
-    anchor_date: (t.anchor_date as string) || null,
-    icon: (t.icon as string) ?? '',
-    color: (t.color as string) ?? '',
-    area_id: t.area_id as string,
-    area_name:
-      (
-        t.expand as Record<string, { name?: string }> | undefined
-      )?.area_id?.name ?? undefined,
-    notes: (t.notes as string) ?? '',
-  }));
+  const mappedTasks: TaskWithName[] = tasks.map((t) => {
+    const assignedToId = (t.assigned_to_id as string) || null;
+    const areaId = t.area_id as string;
+    const area =
+      areaById.get(areaId) ?? { id: areaId, default_assignee_id: null };
+    const effective = resolveAssignee(
+      { id: t.id, assigned_to_id: assignedToId, area_id: areaId },
+      area,
+      members,
+    );
+    return {
+      id: t.id,
+      name: t.name as string,
+      created: t.created as string,
+      archived: Boolean(t.archived),
+      frequency_days: t.frequency_days as number,
+      schedule_mode:
+        (t.schedule_mode as string) === 'anchored' ? 'anchored' : 'cycle',
+      anchor_date: (t.anchor_date as string) || null,
+      icon: (t.icon as string) ?? '',
+      color: (t.color as string) ?? '',
+      area_id: areaId,
+      area_name:
+        (
+          t.expand as Record<string, { name?: string }> | undefined
+        )?.area_id?.name ?? undefined,
+      notes: (t.notes as string) ?? '',
+      assigned_to_id: assignedToId,
+      effective,
+    };
+  });
 
   // Build per-task last-5 completions map for TaskDetailSheet (03-03).
   // `completions` is already sorted DESC by completed_at (getFullList
@@ -100,15 +155,25 @@ export default async function HomeDashboardPage({
   }
 
   return (
-    <BandView
-      tasks={mappedTasks}
-      completions={completions}
-      userId={userId}
-      homeId={homeId}
-      timezone={home.timezone as string}
-      now={now.toISOString()}
-      emptyStateHref={`/h/${homeId}/tasks/new`}
-      lastCompletionsByTaskId={lastCompletionsByTaskId}
-    />
+    <>
+      <div className="mx-auto flex max-w-4xl items-center justify-between px-6 pt-4 pb-0 text-sm text-muted-foreground">
+        <span className="font-medium">{home.name as string}</span>
+        <AvatarStack
+          members={members}
+          href={`/h/${homeId}/members`}
+          title={`${members.length} member${members.length === 1 ? '' : 's'} — view members`}
+        />
+      </div>
+      <BandView
+        tasks={mappedTasks}
+        completions={completions}
+        userId={userId}
+        homeId={homeId}
+        timezone={home.timezone as string}
+        now={now.toISOString()}
+        emptyStateHref={`/h/${homeId}/tasks/new`}
+        lastCompletionsByTaskId={lastCompletionsByTaskId}
+      />
+    </>
   );
 }

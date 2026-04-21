@@ -2,6 +2,8 @@
 
 import { useRef } from 'react';
 import clsx from 'clsx';
+import type { EffectiveAssignee } from '@/lib/assignment';
+import { AssigneeDisplay } from '@/components/assignee-display';
 
 /**
  * TaskRow (03-02 Plan, D-16, SPEC §19 "information, not alarm").
@@ -41,7 +43,13 @@ export function TaskRow({
   daysDelta,
   variant,
 }: {
-  task: { id: string; name: string; frequency_days: number };
+  task: {
+    id: string;
+    name: string;
+    frequency_days: number;
+    /** 04-03 D-10 + TASK-04: resolved cascade from the Server Component. */
+    effective?: EffectiveAssignee;
+  };
   onComplete: (taskId: string) => void;
   onDetail?: (taskId: string) => void;
   pending: boolean;
@@ -83,6 +91,7 @@ export function TaskRow({
       data-task-id={task.id}
       data-task-name={task.name}
       data-variant={variant}
+      data-assignee-kind={task.effective?.kind}
       onClick={() => onComplete(task.id)}
       onContextMenu={handleContextMenu}
       onTouchStart={handleTouchStart}
@@ -97,14 +106,21 @@ export function TaskRow({
           : 'hover:bg-muted active:scale-[0.99]',
       )}
     >
-      <div className="flex flex-col">
-        <span className="font-medium">{task.name}</span>
+      <div className="flex flex-col min-w-0">
+        <span className="font-medium truncate">{task.name}</span>
         <span className="text-xs text-muted-foreground">
           Every {task.frequency_days}{' '}
           {task.frequency_days === 1 ? 'day' : 'days'}
         </span>
       </div>
-      <span className="text-xs text-muted-foreground tabular-nums">{label}</span>
+      <div className="flex items-center gap-2 shrink-0">
+        {task.effective && (
+          <AssigneeDisplay effective={task.effective} showLabel={false} />
+        )}
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {label}
+        </span>
+      </div>
     </button>
   );
 }

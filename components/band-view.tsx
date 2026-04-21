@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { Task } from '@/lib/task-scheduling';
+import type { EffectiveAssignee } from '@/lib/assignment';
 import {
   reduceLatestByTask,
   type CompletionRecord,
@@ -100,6 +101,11 @@ export type TaskWithName = Task & {
   area_id: string;
   area_name?: string;
   notes?: string;
+  /** 04-03 TASK-02: raw assignee relation (user id or null). */
+  assigned_to_id?: string | null;
+  /** 04-03 TASK-03 + TASK-04: pre-resolved cascade result from the
+   * Server Component. Threaded down to TaskRow + TaskDetailSheet. */
+  effective?: EffectiveAssignee;
 };
 
 export function BandView({
@@ -228,18 +234,25 @@ export function BandView({
     setDetailTaskId(taskId);
   }
 
-  // Attach `name` to each ClassifiedTask so the band/horizon children
-  // can render it. The intermediate `TaskWithName` lookup is O(N)
-  // per band but N is bounded by the active task count for the
-  // home (realistic ceiling is <200 for a household — SPEC §19).
-  const nameById = new Map(tasks.map((t) => [t.id, t.name]));
-  const attachName = (ct: ClassifiedTask) =>
-    ({ ...ct, name: nameById.get(ct.id) ?? ct.id }) as ClassifiedTask & {
+  // Attach `name` + `effective` to each ClassifiedTask so the band /
+  // horizon children can render them. The intermediate `TaskWithName`
+  // lookup is O(N) per band but N is bounded by the active task count
+  // for the home (realistic ceiling is <200 for a household — SPEC §19).
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+  const attachMeta = (ct: ClassifiedTask) => {
+    const t = byId.get(ct.id);
+    return {
+      ...ct,
+      name: t?.name ?? ct.id,
+      effective: t?.effective,
+    } as ClassifiedTask & {
       name: string;
+      effective?: EffectiveAssignee;
     };
-  const overdueWithName = bands.overdue.map(attachName);
-  const thisWeekWithName = bands.thisWeek.map(attachName);
-  const horizonWithName = bands.horizon.map(attachName);
+  };
+  const overdueWithName = bands.overdue.map(attachMeta);
+  const thisWeekWithName = bands.thisWeek.map(attachMeta);
+  const horizonWithName = bands.horizon.map(attachMeta);
 
   const detailTask = detailTaskId
     ? tasks.find((t) => t.id === detailTaskId)
@@ -325,6 +338,7 @@ export function BandView({
                 anchor_date: detailTask.anchor_date,
                 notes: detailTask.notes ?? '',
                 area_name: detailTask.area_name,
+                effective: detailTask.effective,
               }
             : null
         }
