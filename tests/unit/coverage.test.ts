@@ -1,0 +1,169 @@
+import { describe, test, expect } from 'vitest';
+import { computeCoverage } from '@/lib/coverage';
+import type { Task } from '@/lib/task-scheduling';
+import type { CompletionRecord } from '@/lib/completions';
+
+/**
+ * 03-01 Task 2 RED→GREEN: computeCoverage pure function (Pattern 8, D-06).
+ *
+ * Coverage = mean(per-task health) across non-archived tasks.
+ * Per-task health = clamp(1 - max(0, (now - nextDue)/frequency_days), 0, 1).
+ *
+ * ≥8 cases per plan <behavior>:
+ *  - Empty / all-archived → 1.0 (empty-home invariant D-06).
+ *  - On-schedule task → health = 1.0 → coverage 1.0.
+ *  - Full-cycle overdue → health = 0 → coverage 0.
+ *  - Half-cycle overdue → health = 0.5.
+ *  - Mix of healthy and overdue → correct mean.
+ *  - Archived tasks are ignored.
+ *  - Rounding / arithmetic sanity on three equal-weight tasks.
+ */
+
+function makeTask(overrides: Partial<Task> = {}): Task {
+  return {
+    id: 't1',
+    created: '2026-04-01T00:00:00.000Z',
+    archived: false,
+    frequency_days: 7,
+    schedule_mode: 'cycle',
+    anchor_date: null,
+    ...overrides,
+  };
+}
+
+function makeCompletion(taskId: string, iso: string): CompletionRecord {
+  return {
+    id: `c-${taskId}-${iso}`,
+    task_id: taskId,
+    completed_by_id: 'u1',
+    completed_at: iso,
+    notes: '',
+    via: 'tap',
+  };
+}
+
+describe('computeCoverage', () => {
+  test('empty tasks array → 1.0 (empty-home invariant D-06)', () => {
+    const now = new Date('2026-04-20T12:00:00.000Z');
+    expect(computeCoverage([], new Map(), now)).toBe(1.0);
+  });
+
+  test('all tasks archived → 1.0 (no active tasks)', () => {
+    const now = new Date('2026-04-20T12:00:00.000Z');
+    const t = makeTask({ id: 't-a', archived: true });
+    expect(computeCoverage([t], new Map(), now)).toBe(1.0);
+  });
+
+  test('single on-schedule task (completed today) → 1.0', () => {
+    const now = new Date('2026-04-20T12:00:00.000Z');
+    const t = makeTask({ id: 't-healthy', frequency_days: 7 });
+    const latest = new Map<string, CompletionRecord>();
+    latest.set(
+      't-healthy',
+      makeCompletion('t-healthy', '2026-04-20T12:00:00.000Z'),
+    );
+    expect(computeCoverage([t], latest, now)).toBeCloseTo(1.0, 10);
+  });
+
+  test('single task never completed, created 14d ago, freq=7 → health clamps to 0 → coverage 0', () => {
+    const now = new Date('2026-04-20T12:00:00.000Z');
+    const t = makeTask({
+      id: 't-zero',
+      created: '2026-04-06T12:00:00.000Z', // 14d ago; due 14d ago → 7d overdue, overdueRatio = 7/7 = 1 → clamps to 0.
+      frequency_days: 7,
+    });
+    expect(computeCoverage([t], new Map(), now)).toBeCloseTo(0, 10);
+  });
+
+  test('single task, freq=10, overdueDays=5 → health = 0.5', () => {
+    const now = new Date('2026-04-20T12:00:00.000Z');
+    // Need nextDue = now - 5d = 2026-04-15T12:00Z. Use cycle mode with
+    // lastCompletion = nextDue - 10d = 2026-04-05T12:00Z.
+    const t = makeTask({
+      id: 't-half',
+      frequency_days: 10,
+    });
+    const latest = new Map<string, CompletionRecord>();
+    latest.set('t-half', makeCompletion('t-half', '2026-04-05T12:00:00.000Z'));
+    const cov = computeCoverage([t], latest, now);
+    expect(cov).toBeCloseTo(0.5, 10);
+  });
+
+  test('two tasks — one healthy + one 50% overdue → coverage 0.75', () => {
+    const now = new Date('2026-04-20T12:00:00.000Z');
+    const healthy = makeTask({
+      id: 't-h',
+      frequency_days: 7,
+    });
+    const half = makeTask({
+      id: 't-50',
+      frequency_days: 10,
+    });
+    const latest = new Map<string, CompletionRecord>();
+    // Healthy: completed today → health 1.0
+    latest.set('t-h', makeCompletion('t-h', '2026-04-20T12:00:00.000Z'));
+    // Half-overdue: lastCompletion at now - 15d, freq=10 → nextDue at now-5d → overdueDays=5, ratio=0.5, health=0.5
+    latest.set('t-50', makeCompletion('t-50', '2026-04-05T12:00:00.000Z'));
+    const cov = computeCoverage([healthy, half], latest, now);
+    expect(cov).toBeCloseTo(0.75, 10);
+  });
+
+  test('one archived + one healthy → coverage is 1.0 (archived ignored)', () => {
+    const now = new Date('2026-04-20T12:00:00.000Z');
+    const archivedOverdue = makeTask({
+      id: 't-arch',
+      archived: true,
+      created: '2026-01-01T00:00:00.000Z',
+    });
+    const healthy = makeTask({
+      id: 't-ok',
+      frequency_days: 7,
+    });
+    const latest = new Map<string, CompletionRecord>();
+    latest.set('t-ok', makeCompletion('t-ok', '2026-04-20T12:00:00.000Z'));
+    expect(
+      computeCoverage([archivedOverdue, healthy], latest, now),
+    ).toBeCloseTo(1.0, 10);
+  });
+
+  test('three tasks with healths 1.0, 0.5, 0.0 → coverage = 0.5', () => {
+    const now = new Date('2026-04-20T12:00:00.000Z');
+    const tHealthy = makeTask({ id: 'th', frequency_days: 7 });
+    const tHalf = makeTask({ id: 'thalf', frequency_days: 10 });
+    const tZero = makeTask({
+      id: 'tzero',
+      frequency_days: 7,
+      created: '2026-04-06T12:00:00.000Z', // 14d ago → full-cycle overdue → 0
+    });
+    const latest = new Map<string, CompletionRecord>();
+    latest.set('th', makeCompletion('th', '2026-04-20T12:00:00.000Z'));
+    latest.set('thalf', makeCompletion('thalf', '2026-04-05T12:00:00.000Z'));
+    // tZero never completed.
+    const cov = computeCoverage([tHealthy, tHalf, tZero], latest, now);
+    expect(cov).toBeCloseTo(0.5, 10);
+  });
+
+  test('clamps to 0 when overdueDays exceed frequency (e.g. 3x cycle overdue)', () => {
+    const now = new Date('2026-04-20T12:00:00.000Z');
+    const t = makeTask({
+      id: 't-way-overdue',
+      // Never completed, created 30d ago, freq=7 → nextDue = 23d ago,
+      // overdueDays = 23, ratio = 23/7 ~= 3.29 → clamp to 0.
+      created: '2026-03-21T12:00:00.000Z',
+      frequency_days: 7,
+    });
+    expect(computeCoverage([t], new Map(), now)).toBeCloseTo(0, 10);
+  });
+
+  test('early completion (before nextDue) → health clamps to 1.0 (no negative overdue)', () => {
+    const now = new Date('2026-04-20T12:00:00.000Z');
+    const t = makeTask({
+      id: 't-early',
+      frequency_days: 7,
+    });
+    const latest = new Map<string, CompletionRecord>();
+    // Completed 1 day ago → nextDue = 6 days from now → overdueDays = max(0, -6) = 0
+    latest.set('t-early', makeCompletion('t-early', '2026-04-19T12:00:00.000Z'));
+    expect(computeCoverage([t], latest, now)).toBeCloseTo(1.0, 10);
+  });
+});
