@@ -214,7 +214,13 @@ export async function acceptInvite(token: string): Promise<AcceptInviteResult> {
     /* non-fatal */
   }
 
-  revalidatePath('/h', 'layout');
+  // 04-03 deviation (Rule 1): acceptInvite is called from the
+  // /invite/[token]/page.tsx Server Component during render. Next 16
+  // rejects revalidatePath() during RSC render ("used revalidatePath
+  // during render which is unsupported"). The subsequent redirect(...)
+  // triggers a fresh RSC render of the destination (/h/[homeId]) so
+  // the newly-joined home is visible anyway. The sibling /h listing
+  // will re-fetch on the user's next navigation to /h.
   return { ok: true, homeId: inviteHomeId };
 }
 

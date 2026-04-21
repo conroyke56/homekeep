@@ -121,9 +121,12 @@ test('multiple homes + last-viewed persistence (HOME-03 / HOME-04)', async ({
   await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}$/);
   await expect(switcherFor(/House B/)).toBeVisible();
 
-  // Switch back to House A via the HomeSwitcher dropdown.
+  // Switch back to House A via the HomeSwitcher dropdown. 04-03 added
+  // an "Owner" badge inside the menuitem so the accessible name is now
+  // "House A Owner"; use a prefix match instead of an exact-equality
+  // regex.
   await switcherFor(/House B/).click();
-  await page.getByRole('menuitem', { name: /^House A$/ }).click();
+  await page.getByRole('menuitem', { name: /^House A(?:\s+Owner)?$/ }).click();
   await expect(switcherFor(/House A/)).toBeVisible();
 
   // Log out and log back in — should land on House A (last-viewed).
