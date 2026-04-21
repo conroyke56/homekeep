@@ -69,10 +69,14 @@
 
 ### Main View (Three-Band)
 
-- [ ] **VIEW-01**: Default screen shows three bands: Overdue (top), This Week (middle), Horizon (bottom)
-- [ ] **VIEW-02**: Overdue band only appears when tasks are actually overdue, sorted by days overdue
-- [ ] **VIEW-03**: This Week band shows 7-day window, grouped by day if >5 items
-- [ ] **VIEW-04**: Horizon band shows 12-month calendar strip with task dots/pills per month
+- [x] **VIEW-01
+**: Default screen shows three bands: Overdue (top), This Week (middle), Horizon (bottom)
+- [x] **VIEW-02
+**: Overdue band only appears when tasks are actually overdue, sorted by days overdue
+- [x] **VIEW-03
+**: This Week band shows 7-day window, grouped by day if >5 items
+- [x] **VIEW-04
+**: Horizon band shows 12-month calendar strip with task dots/pills per month
 - [x] **VIEW-05
 **: Coverage ring at top shows % of annual maintenance on track (equal-weight, frequency-normalized)
 - [ ] **VIEW-06**: Tapping a task allows completion or viewing details
