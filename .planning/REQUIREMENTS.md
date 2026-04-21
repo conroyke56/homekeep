@@ -276,18 +276,18 @@
 | ONBD-02 | Phase 5 | Complete |
 | ONBD-03 | Phase 5 | Complete |
 | ONBD-04 | Phase 5 | Complete |
-| NOTF-01 | Phase 6 | Pending |
-| NOTF-02 | Phase 6 | Pending |
-| NOTF-03 | Phase 6 | Pending |
-| NOTF-04 | Phase 6 | Pending |
-| NOTF-05 | Phase 6 | Pending |
-| NOTF-06 | Phase 6 | Pending |
-| NOTF-07 | Phase 6 | Pending |
-| GAME-01 | Phase 6 | Pending |
-| GAME-02 | Phase 6 | Pending |
-| GAME-03 | Phase 6 | Pending |
-| GAME-04 | Phase 6 | Pending |
-| GAME-05 | Phase 6 | Pending |
+| NOTF-01 | Phase 6 | Complete |
+| NOTF-02 | Phase 6 | Complete |
+| NOTF-03 | Phase 6 | Complete |
+| NOTF-04 | Phase 6 | Complete |
+| NOTF-05 | Phase 6 | Complete |
+| NOTF-06 | Phase 6 | Complete |
+| NOTF-07 | Phase 6 | Complete |
+| GAME-01 | Phase 6 | Complete |
+| GAME-02 | Phase 6 | Complete |
+| GAME-03 | Phase 6 | Complete |
+| GAME-04 | Phase 6 | Complete |
+| GAME-05 | Phase 6 | Complete |
 | INFR-01 | Phase 1 | Complete (01-02) |
 | INFR-02 | Phase 1 | Complete (01-02) |
 | INFR-03 | Phase 1 | Complete (01-02) |
