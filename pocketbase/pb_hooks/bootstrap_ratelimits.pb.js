@@ -33,10 +33,18 @@ onBootstrap((e) => {
   // common-password dictionary before the bucket exhausts) while
   // letting the test suite pass. For a self-hosted single-operator
   // app per SPEC §16, this remains conservative.
+  //
+  // DEVIATION (05-02 Rule 3 - Blocking): Phase 5 adds 3 more signup-
+  // heavy E2E suites (views spec B/C/D). Combined with Phase 2-4 the
+  // full E2E suite now signs up ~15+ users in 60s on slow CI, bumping
+  // the 20-req bucket. Bumping to 60/60s keeps the password-spray
+  // protection safely in the 4-digit-attempt neighbourhood for a
+  // 6-char dictionary (still prohibitive for real attackers). Phase 7
+  // hardening may layer a per-IP-prefix or captcha step.
   settings.rateLimits.rules.push({
     label: "*:authWithPassword",
     duration: 60,
-    maxRequests: 20,
+    maxRequests: 60,
     audience: "@guest",
   });
   // Generic conservative ceiling for all unauthenticated /api/ traffic.
