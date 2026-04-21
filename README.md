@@ -113,8 +113,6 @@ Open <http://localhost:3000>, sign up, create a home. The PocketBase admin UI li
 
 Model borrowed from Plex, Nextcloud, Grafana, Postgres. `:latest` is **stable**, not nightly.
 
-> Pre-v1.0.0 note: right now `:latest` points at `1.0.0-rc1` because there's no stable release yet. The moment `v1.0.0` ships (non-RC), `:latest` auto-updates and this note goes away.
-
 ### Option 2 — `docker compose up` (LAN)
 
 Drop this file anywhere as `docker-compose.yml` — no clone required:
