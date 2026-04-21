@@ -53,12 +53,20 @@ test('D-21 full happy path: signup -> home -> area -> cycle task -> anchored tas
   await expect(page).toHaveURL(/\/h\/new$/);
   await page.fill('[name=name]', 'TestHouse');
   await page.click('button[type=submit]');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+$/);
-  await expect(page.getByRole('heading', { name: 'TestHouse' })).toBeVisible();
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}$/);
+  // Phase 3 replaced the home heading with the BandView. Probe the
+  // HomeSwitcher in the banner instead — it surfaces the home name.
+  await expect(
+    page.getByRole('banner').getByRole('button', { name: /TestHouse/ }),
+  ).toBeVisible();
 
-  // Manage areas -> Whole Home present, add Kitchen
-  await page.click('text=Manage areas');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/areas$/);
+  // Manage areas -> Whole Home present, add Kitchen.
+  // (Phase 3 replaced the home dashboard's "Manage areas" link with the
+  // three-band BandView. Navigate directly to the areas route — retained
+  // from Phase 2.)
+  const homeUrlAfterCreate = page.url();
+  await page.goto(homeUrlAfterCreate + '/areas');
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/areas$/);
   await expect(page.locator('[data-area-name="Whole Home"]').first()).toBeVisible();
 
   await page.click('text=Add area');
@@ -69,12 +77,12 @@ test('D-21 full happy path: signup -> home -> area -> cycle task -> anchored tas
   // Open Kitchen
   const kitchenRow = page.locator('[data-area-name="Kitchen"]').first();
   await kitchenRow.getByRole('link', { name: 'Kitchen' }).click();
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/areas\/[a-z0-9]+$/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/areas\/[a-z0-9]{15}$/);
   const kitchenUrl = page.url();
 
   // Create "Wipe benches" weekly cycle task
   await page.click('text=Add task');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/tasks\/new/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/tasks\/new/);
   await page.fill('[name=name]', 'Wipe benches');
 
   // Click the Weekly quick-select BEFORE anything else — this is the
@@ -84,7 +92,7 @@ test('D-21 full happy path: signup -> home -> area -> cycle task -> anchored tas
   // a schema error). We at least verify clicking Weekly does NOT
   // navigate away.
   await page.click('button:has-text("Weekly")');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/tasks\/new/); // still here
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/tasks\/new/); // still here
 
   await page.click('button:has-text("Create task")');
 
@@ -99,7 +107,7 @@ test('D-21 full happy path: signup -> home -> area -> cycle task -> anchored tas
 
   // Create a quarterly ANCHORED task with today as the anchor
   await page.click('text=Add task');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/tasks\/new/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/tasks\/new/);
   await page.fill('[name=name]', 'Quarterly air-con');
   await page.click('button:has-text("Quarterly")');
 
@@ -128,11 +136,16 @@ test('D-21 full happy path: signup -> home -> area -> cycle task -> anchored tas
   await page.fill('[name=email]', email);
   await page.fill('[name=password]', pw);
   await page.click('button[type=submit]');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+$/);
-  await expect(page.getByRole('heading', { name: 'TestHouse' })).toBeVisible();
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}$/);
+  // Phase 3 replaced the home heading with the BandView. Probe the
+  // HomeSwitcher in the banner instead — it surfaces the home name.
+  await expect(
+    page.getByRole('banner').getByRole('button', { name: /TestHouse/ }),
+  ).toBeVisible();
 
   // Re-navigate to Kitchen; task still there (data persisted).
-  await page.click('text=Manage areas');
+  const homeUrlAfterLogin = page.url();
+  await page.goto(homeUrlAfterLogin + '/areas');
   await page
     .locator('[data-area-name="Kitchen"]')
     .first()
@@ -150,10 +163,12 @@ test('archive task removes it from the area active list', async ({ page }) => {
   await page.click('text=Create your first home');
   await page.fill('[name=name]', 'ArchiveHouse');
   await page.click('button[type=submit]');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+$/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}$/);
 
-  // Create Laundry area
-  await page.click('text=Manage areas');
+  // Create Laundry area — navigate directly to /areas (Phase 3 removed
+  // the home-dashboard "Manage areas" link; the route is retained).
+  const archiveHomeUrl = page.url();
+  await page.goto(archiveHomeUrl + '/areas');
   await page.click('text=Add area');
   await page.fill('[name=name]', 'Laundry');
   await page.click('button:has-text("Create area")');
@@ -165,11 +180,11 @@ test('archive task removes it from the area active list', async ({ page }) => {
     .first()
     .getByRole('link', { name: 'Laundry' })
     .click();
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/areas\/[a-z0-9]+$/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/areas\/[a-z0-9]{15}$/);
   const laundryUrl = page.url();
 
   await page.click('text=Add task');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/tasks\/new/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/tasks\/new/);
   await page.fill('[name=name]', 'Clean dryer lint');
   await page.click('button:has-text("Monthly")');
   await page.click('button:has-text("Create task")');
@@ -184,11 +199,11 @@ test('archive task removes it from the area active list', async ({ page }) => {
 
   // Open the task detail page -> Archive
   await page.click('text=Clean dryer lint');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/tasks\/[a-z0-9]+$/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/tasks\/[a-z0-9]{15}$/);
   await page.click('button:has-text("Archive task")');
 
   // After archive we redirect back to the Laundry area page.
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/areas\/[a-z0-9]+$/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/areas\/[a-z0-9]{15}$/);
 
   // The archived task NO LONGER appears in the active list; empty-state
   // message is shown. Use getByText with exact to avoid matching the

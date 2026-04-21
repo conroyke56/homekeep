@@ -1,43 +1,45 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
 
 /**
  * D-21 Phase 3 core-loop E2E (03-03 Plan Task 3).
  *
  * Two scenarios cover the entire tap-to-complete flow end-to-end:
  *
- * Scenario 1 — early-completion guard fires on a just-created task
- *   1. Signup new user -> empty /h.
- *   2. Create home "TestHouse".
- *   3. Add Kitchen area. Add Weekly (7d cycle) task "Wipe benches".
- *   4. Navigate back to /h/[homeId] — task appears in the This Week
- *      band (nextDue is 7 days out from creation).
- *   5. Tap the task row.
- *   6. Guard dialog appears (task just created, 0 days elapsed, far
- *      under the 25% threshold of 1.75 days).
- *   7. Click "Mark done anyway" -> sonner toast fires -> task
- *      disappears from This Week band.
- *   8. Reload -> task still absent from This Week (persisted).
+ * Scenario 1 — early-completion guard fires when a recent completion exists
+ *   Flow: signup -> home -> Kitchen -> Weekly (7d cycle) "Wipe benches".
+ *   Seed a completion dated ONE day ago (via the PB REST API as the newly-
+ *   signed-up user). The task's nextDue is now (yesterday + 7d) = ~6 days
+ *   from now, placing it in the This Week band. Because elapsed since
+ *   that completion is 1d < 0.25 * 7d = 1.75d, the early-completion guard
+ *   fires when the user taps the row. Accepting ("Mark done anyway")
+ *   records a fresh completion, the toast appears, and the task leaves
+ *   This Week (nextDue shifts ~7d into the future).
+ *
+ *   NOTE on why we don't rely on task.created alone: PB's `created` field
+ *   is an AutodateField (onCreate: true) which the server always stamps
+ *   at insert time and is not client-settable. A brand-new Weekly task
+ *   therefore has nextDue = now + 7d, which lands in Horizon, not This
+ *   Week — the band classification boundary is strict (<= 7d of local
+ *   midnight). Seeding a back-dated completion is the path the guard
+ *   was designed to handle (see lib/early-completion-guard.ts: the
+ *   reference is always the LATEST completion when one exists).
  *
  * Scenario 2 — stale task in Overdue, no guard fires
- *   1. Separate user signup + home + Kitchen area + Weekly task
- *      "Clean filter".
- *   2. Seed a back-dated completion 10 days ago via the PB REST API.
- *      We auth against PB directly (port 8090) using the same email/
- *      password that created the user — the Next.js pb_auth cookie is
- *      HttpOnly and scoped to :3001, so we get a fresh token from PB.
- *   3. Reload /h/[homeId] — task is now in Overdue (10d ago + 7d freq
- *      = 3d overdue).
- *   4. Tap the task -> NO dialog (elapsed 10d >> 25% of 7d = 1.75d).
- *   5. Toast fires -> task moves out of Overdue.
- *   6. Reload -> state persisted.
+ *   Same signup/home/task scaffolding, but seed a completion dated
+ *   TEN days ago. nextDue = 10d ago + 7d = 3d ago → Overdue band.
+ *   Tapping the row: elapsed 10d >> 1.75d threshold → guard does NOT
+ *   fire. A completion is recorded immediately and the toast appears.
+ *   The task moves out of Overdue (its new nextDue is ~7d from now,
+ *   which under Perth/UTC+8 lands in Horizon, not This Week).
  *
- * Flake mitigations (from 02-05 + tasks-happy-path lessons):
+ * Flake mitigations:
  *   - Unique email per scenario via Date.now() + random suffix.
- *   - URL-assertion pacing rather than arbitrary timeouts.
- *   - Sonner toast assertion tolerates the 5s default display.
- *   - Reload uses page.goto(homeUrl) rather than page.reload() in
- *     the persistence-check step to force a fresh Server Component
- *     render (defense against a stale router cache).
+ *   - URL regex uses {15} for PB id length — prevents the ambiguous
+ *     `/h/new` match that would otherwise let `expect(toHaveURL)` return
+ *     before the home-create redirect completes.
+ *   - Sonner toast assertion has a 5s timeout (default render window).
+ *   - Final assertions reload via page.goto(homeUrl) to force a fresh
+ *     Server Component render, not a router-cache replay.
  */
 
 const PB_URL = 'http://127.0.0.1:8090';
@@ -57,11 +59,12 @@ async function createHomeAndKitchen(page: Page, homeName: string): Promise<strin
   await expect(page).toHaveURL(/\/h\/new$/);
   await page.fill('[name=name]', homeName);
   await page.click('button[type=submit]');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+$/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}$/);
   const homeUrl = page.url();
 
-  await page.click('text=Manage areas');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/areas$/);
+  // Phase 3 removed the "Manage areas" dashboard link — navigate directly.
+  await page.goto(homeUrl + '/areas');
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/areas$/);
   await page.click('text=Add area');
   await page.fill('[name=name]', 'Kitchen');
   await page.click('button:has-text("Create area")');
@@ -74,20 +77,101 @@ async function createWeeklyTaskInKitchen(page: Page, homeUrl: string, taskName: 
   await page.goto(homeUrl + '/areas');
   const kitchenRow = page.locator('[data-area-name="Kitchen"]').first();
   await kitchenRow.getByRole('link', { name: 'Kitchen' }).click();
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/areas\/[a-z0-9]+$/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/areas\/[a-z0-9]{15}$/);
 
   await page.click('text=Add task');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/tasks\/new/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/tasks\/new/);
   await page.fill('[name=name]', taskName);
   await page.click('button:has-text("Weekly")');
   await page.click('button:has-text("Create task")');
-  // Redirected back to the Kitchen area page.
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/areas\/[a-z0-9]+$/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/areas\/[a-z0-9]{15}$/);
+}
+
+/**
+ * Authenticates against PB directly (port 8090) with the user's email/pw
+ * and returns { token, userId }. The Next pb_auth cookie is HttpOnly and
+ * same-origin to :3001, so we roundtrip through PB's own auth endpoint
+ * to get a token usable on cross-origin requests from the Playwright
+ * APIRequestContext.
+ */
+async function authPB(
+  request: APIRequestContext,
+  email: string,
+  pw: string,
+): Promise<{ token: string; userId: string }> {
+  const res = await request.post(
+    `${PB_URL}/api/collections/users/auth-with-password`,
+    { data: { identity: email, password: pw } },
+  );
+  expect(res.ok()).toBeTruthy();
+  const body = await res.json();
+  const token = body?.token as string;
+  const userId = body?.record?.id as string;
+  expect(token).toBeTruthy();
+  expect(userId).toBeTruthy();
+  return { token, userId };
+}
+
+/**
+ * Looks up the user's only task in the given home (they only create one
+ * per scenario) and returns its id.
+ */
+async function findTaskId(
+  request: APIRequestContext,
+  token: string,
+  homeId: string,
+  taskName: string,
+): Promise<string> {
+  const res = await request.get(
+    `${PB_URL}/api/collections/tasks/records?filter=${encodeURIComponent(`home_id = "${homeId}" && name = "${taskName}"`)}`,
+    { headers: { Authorization: token } },
+  );
+  expect(res.ok()).toBeTruthy();
+  const body = await res.json();
+  const items = (body?.items ?? []) as Array<{ id: string }>;
+  expect(items.length).toBeGreaterThan(0);
+  return items[0].id;
+}
+
+/**
+ * Seeds a completion whose completed_at is `daysAgo` days before now.
+ * PB's completions.createRule requires `completed_by_id = @request.auth.id`,
+ * so we send userId in the body.
+ */
+async function seedCompletion(
+  request: APIRequestContext,
+  token: string,
+  userId: string,
+  taskId: string,
+  daysAgo: number,
+) {
+  const completedAt = new Date(Date.now() - daysAgo * 86400000).toISOString();
+  const res = await request.post(
+    `${PB_URL}/api/collections/completions/records`,
+    {
+      headers: { Authorization: token },
+      data: {
+        task_id: taskId,
+        completed_by_id: userId,
+        completed_at: completedAt,
+        via: 'manual-date',
+        notes: '',
+      },
+    },
+  );
+  expect(res.ok()).toBeTruthy();
+}
+
+function extractHomeId(homeUrl: string): string {
+  const m = homeUrl.match(/\/h\/([a-z0-9]{15})$/);
+  if (!m) throw new Error(`Could not extract home id from ${homeUrl}`);
+  return m[1];
 }
 
 test.describe('Phase 3 Core Loop (D-21)', () => {
-  test('Scenario 1 — just-created task triggers early-completion guard -> accept -> moves out of This Week', async ({
+  test('Scenario 1 — early-completion guard fires -> accept -> moves out of This Week', async ({
     page,
+    request,
   }) => {
     const email = `core-s1-${Date.now()}-${Math.floor(Math.random() * 1e6)}@test.com`;
     const pw = 'password123';
@@ -96,11 +180,18 @@ test.describe('Phase 3 Core Loop (D-21)', () => {
     const homeUrl = await createHomeAndKitchen(page, 'TestHouseS1');
     await createWeeklyTaskInKitchen(page, homeUrl, 'Wipe benches');
 
+    // Back-date a completion to 1 day ago so nextDue = -1d + 7d = +6d
+    // (lands in This Week band) and elapsed 1d < 0.25*7 = 1.75d → guard fires.
+    const homeId = extractHomeId(homeUrl);
+    const { token, userId } = await authPB(request, email, pw);
+    const taskId = await findTaskId(request, token, homeId, 'Wipe benches');
+    await seedCompletion(request, token, userId, taskId, 1);
+
     // Navigate to the home dashboard (BandView).
     await page.goto(homeUrl);
     await expect(page.locator('[data-band-view]')).toBeVisible();
 
-    // Task lives in the This Week band (nextDue ~7d from creation).
+    // Task lives in the This Week band (nextDue ~6d from now).
     const taskInThisWeek = page.locator(
       '[data-band="thisWeek"] [data-task-name="Wipe benches"]',
     );
@@ -124,7 +215,7 @@ test.describe('Phase 3 Core Loop (D-21)', () => {
       page.getByText(/Done — next due/),
     ).toBeVisible({ timeout: 5000 });
 
-    // Task moved OUT of This Week band (it's ~7 days out again).
+    // Task moves out of This Week (new nextDue shifts ~7d forward).
     await expect(
       page.locator('[data-band="thisWeek"] [data-task-name="Wipe benches"]'),
     ).toHaveCount(0);
@@ -148,54 +239,13 @@ test.describe('Phase 3 Core Loop (D-21)', () => {
     const homeUrl = await createHomeAndKitchen(page, 'TestHouseS2');
     await createWeeklyTaskInKitchen(page, homeUrl, 'Clean filter');
 
-    await page.goto(homeUrl);
-    await expect(page.locator('[data-band-view]')).toBeVisible();
+    // Back-date a completion 10 days ago → nextDue = 10d ago + 7d = -3d → Overdue.
+    const homeId = extractHomeId(homeUrl);
+    const { token, userId } = await authPB(request, email, pw);
+    const taskId = await findTaskId(request, token, homeId, 'Clean filter');
+    await seedCompletion(request, token, userId, taskId, 10);
 
-    // Extract the task id from the DOM (data-task-id on the row button).
-    const taskRow = page
-      .locator('[data-task-name="Clean filter"]')
-      .first();
-    await expect(taskRow).toBeVisible();
-    const taskId = await taskRow.getAttribute('data-task-id');
-    if (!taskId) throw new Error('Could not read task id from DOM');
-
-    // Auth against PB directly (loopback :8090) to get a token scoped to
-    // this user. The Next pb_auth cookie is HttpOnly + same-origin to
-    // :3001, so we use the SDK's direct auth endpoint.
-    const authRes = await request.post(
-      `${PB_URL}/api/collections/users/auth-with-password`,
-      {
-        data: { identity: email, password: pw },
-      },
-    );
-    expect(authRes.ok()).toBeTruthy();
-    const auth = await authRes.json();
-    const token = auth.token as string;
-    const userId = auth.record?.id as string;
-    expect(token).toBeTruthy();
-    expect(userId).toBeTruthy();
-
-    // Seed a back-dated completion ten days ago. PB completions.createRule
-    // requires @request.body.completed_by_id = @request.auth.id, so we MUST
-    // send userId as completed_by_id.
-    const tenDaysAgo = new Date(Date.now() - 10 * 86400000).toISOString();
-    const createRes = await request.post(
-      `${PB_URL}/api/collections/completions/records`,
-      {
-        headers: { Authorization: token },
-        data: {
-          task_id: taskId,
-          completed_by_id: userId,
-          completed_at: tenDaysAgo,
-          via: 'manual-date',
-          notes: '',
-        },
-      },
-    );
-    expect(createRes.ok()).toBeTruthy();
-
-    // Reload -> the task's nextDue now = tenDaysAgo + 7d = 3 days ago,
-    // so it lands in the Overdue band.
+    // Navigate to dashboard; task is in Overdue band.
     await page.goto(homeUrl);
     await expect(page.locator('[data-band-view]')).toBeVisible();
     const overdueRow = page.locator(
@@ -216,7 +266,7 @@ test.describe('Phase 3 Core Loop (D-21)', () => {
       page.getByText(/Done — next due/),
     ).toBeVisible({ timeout: 5000 });
 
-    // Task moved out of Overdue.
+    // Task moves out of Overdue.
     await expect(
       page.locator('[data-band="overdue"] [data-task-name="Clean filter"]'),
     ).toHaveCount(0);

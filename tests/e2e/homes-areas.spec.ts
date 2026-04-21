@@ -46,11 +46,14 @@ test('create home → Whole Home auto-created → add Kitchen → edit → delet
   await page.click('button[type=submit]');
 
   // Redirect to /h/[newHomeId]
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+$/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}$/);
 
-  // Navigate to the Areas management page — Whole Home should be there
-  await page.click('text=Manage areas');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/areas$/);
+  // Navigate to the Areas management page — Whole Home should be there.
+  // (Phase 3 replaced the "Manage areas" home-dashboard link with the
+  // BandView; the /areas route is retained from Phase 2.)
+  const homeUrl = page.url();
+  await page.goto(homeUrl + '/areas');
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/areas$/);
   await expect(page.locator('text=Whole Home')).toBeVisible();
 
   // Whole Home row MUST NOT expose a Delete affordance (AREA-02 UI guard)
@@ -75,7 +78,7 @@ test('create home → Whole Home auto-created → add Kitchen → edit → delet
 
   // Edit the Kitchen area — click its row link to land on the edit page
   await kitchenRow.getByRole('link', { name: 'Kitchen' }).click();
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+\/areas\/[a-z0-9]+$/);
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/areas\/[a-z0-9]{15}$/);
 
   await page.fill('[name=name]', 'Kitchen & Dining');
   await page.click('button:has-text("Save changes")');
@@ -94,31 +97,34 @@ test('multiple homes + last-viewed persistence (HOME-03 / HOME-04)', async ({
   const pw = 'password123';
   await signup(page, email, pw);
 
+  // Phase 3 replaced the home-page heading with the BandView — the home
+  // name now surfaces via the HomeSwitcher button in the banner. Use that
+  // as the visibility probe for "currently on this home".
+  const header = page.getByRole('banner');
+  const switcherFor = (name: RegExp) =>
+    header.getByRole('button', { name });
+
   // First home
   await page.click('text=Create your first home');
   await page.fill('[name=name]', 'House A');
   await page.click('button[type=submit]');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+$/);
-  await expect(page.getByRole('heading', { name: 'House A' })).toBeVisible();
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}$/);
+  await expect(switcherFor(/House A/)).toBeVisible();
 
   // Switcher in the header now shows "House A" (once fresh user record is
   // re-fetched post-redirect). Open it via the banner's switcher button.
-  const header = page.getByRole('banner');
-  await expect(
-    header.getByRole('button', { name: /House A/ }),
-  ).toBeVisible();
-  await header.getByRole('button', { name: /House A/ }).click();
+  await switcherFor(/House A/).click();
   await page.getByRole('menuitem', { name: /Create another home/ }).click();
   await expect(page).toHaveURL(/\/h\/new/);
   await page.fill('[name=name]', 'House B');
   await page.click('button[type=submit]');
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+$/);
-  await expect(page.getByRole('heading', { name: 'House B' })).toBeVisible();
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}$/);
+  await expect(switcherFor(/House B/)).toBeVisible();
 
   // Switch back to House A via the HomeSwitcher dropdown.
-  await header.getByRole('button', { name: /House B/ }).click();
+  await switcherFor(/House B/).click();
   await page.getByRole('menuitem', { name: /^House A$/ }).click();
-  await expect(page.getByRole('heading', { name: 'House A' })).toBeVisible();
+  await expect(switcherFor(/House A/)).toBeVisible();
 
   // Log out and log back in — should land on House A (last-viewed).
   await page.click('[aria-label=Account]');
@@ -130,6 +136,6 @@ test('multiple homes + last-viewed persistence (HOME-03 / HOME-04)', async ({
   await page.click('button[type=submit]');
 
   // HOME-03: /h redirects to /h/[lastViewedId] which is House A.
-  await expect(page).toHaveURL(/\/h\/[a-z0-9]+$/);
-  await expect(page.getByRole('heading', { name: 'House A' })).toBeVisible();
+  await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}$/);
+  await expect(switcherFor(/House A/)).toBeVisible();
 });
