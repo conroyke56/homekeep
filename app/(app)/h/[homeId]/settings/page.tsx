@@ -113,7 +113,11 @@ export default async function HomeSettingsPage({
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/50">
+      {/* Danger zone: warm-brick tone via the tightened --destructive
+          token (globals.css, Phase 9). The 5% alpha background + 30%
+          border tone make the panel obviously 'hotter' than the
+          neutral cards above it without shouting pure red. */}
+      <Card className="border-destructive/30 bg-destructive/5">
         <CardHeader>
           <CardTitle className="text-destructive">Danger zone</CardTitle>
           <CardDescription>

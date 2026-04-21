@@ -82,7 +82,11 @@
     --accent: hsl(30 25% 90%);
     --accent-foreground: hsl(25 15% 15%);
 
-    --destructive: hsl(0 65% 50%);
+    /* Warm brick/rust — still reads as 'danger' (sits in the red half
+     * of the wheel) but shares the warm hue family with the terracotta
+     * primary at hsl(30 45% 65%). Prevents the cool-pure-red siren from
+     * clashing with the rest of the palette (Phase 9 UX audit). */
+    --destructive: hsl(12 55% 48%);
 
     --border: hsl(30 15% 85%);
     --input: hsl(30 15% 85%);
@@ -125,7 +129,10 @@
     --accent: hsl(25 10% 25%);
     --accent-foreground: hsl(30 15% 95%);
 
-    --destructive: hsl(0 60% 55%);
+    /* Warm-brick destructive for dark mode — mirrors the light-mode
+     * Phase 9 adjustment with a slightly higher lightness so it still
+     * passes on the darker background. */
+    --destructive: hsl(12 55% 55%);
 
     --border: hsl(25 10% 25%);
     --input: hsl(25 10% 25%);
