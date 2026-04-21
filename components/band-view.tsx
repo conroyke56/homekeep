@@ -159,16 +159,22 @@ export function BandView({
     if (pendingTaskId === taskId) return;
     setPendingTaskId(taskId);
 
-    const optimistic: CompletionRecord = {
-      id: `optimistic-${taskId}-${Date.now()}`,
-      task_id: taskId,
-      completed_by_id: userId,
-      completed_at: new Date().toISOString(),
-      notes: '',
-      via: 'tap',
-    };
-
     startTransition(async () => {
+      // Clock reads live inside the transition callback — not in the
+      // render body — so React Compiler's react-hooks/purity rule
+      // does not flag them as impure. The optimistic record is
+      // synthesised here because its values are ephemeral (server
+      // returns the authoritative id + timestamp on success).
+      const nowIso = new Date().toISOString();
+      const optimistic: CompletionRecord = {
+        id: `optimistic-${taskId}-${nowIso}`,
+        task_id: taskId,
+        completed_by_id: userId,
+        completed_at: nowIso,
+        notes: '',
+        via: 'tap',
+      };
+
       // Optimistic state is scoped to this transition — React auto-
       // rolls it back on transition end if the action path does not
       // lead to a confirmed server write (e.g. guard fires).
