@@ -37,7 +37,7 @@ describe('isSecureContext', () => {
 describe('isStandaloneMode', () => {
   it('returns true when matchMedia(display-mode: standalone) matches', () => {
     const win = {
-      matchMedia: (_q: string) => ({ matches: true }),
+      matchMedia: () => ({ matches: true }),
       navigator: {},
     } as unknown as Window;
     expect(isStandaloneMode(win)).toBe(true);
@@ -45,7 +45,7 @@ describe('isStandaloneMode', () => {
 
   it('returns true when navigator.standalone is true (iOS Safari quirk)', () => {
     const win = {
-      matchMedia: (_q: string) => ({ matches: false }),
+      matchMedia: () => ({ matches: false }),
       navigator: { standalone: true },
     } as unknown as Window;
     expect(isStandaloneMode(win)).toBe(true);
@@ -53,7 +53,7 @@ describe('isStandaloneMode', () => {
 
   it('returns false when neither signal is present', () => {
     const win = {
-      matchMedia: (_q: string) => ({ matches: false }),
+      matchMedia: () => ({ matches: false }),
       navigator: {},
     } as unknown as Window;
     expect(isStandaloneMode(win)).toBe(false);
