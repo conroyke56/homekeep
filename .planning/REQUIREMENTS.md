@@ -61,7 +61,8 @@
 
 ### Completions
 
-- [ ] **COMP-01**: User can complete a task with one tap (records who, when)
+- [x] **COMP-01
+**: User can complete a task with one tap (records who, when)
 - [x] **COMP-02
 **: Early-completion guard prompts when <25% of cycle elapsed since last completion
 - [x] **COMP-03
@@ -79,7 +80,8 @@
 **: Horizon band shows 12-month calendar strip with task dots/pills per month
 - [x] **VIEW-05
 **: Coverage ring at top shows % of annual maintenance on track (equal-weight, frequency-normalized)
-- [ ] **VIEW-06**: Tapping a task allows completion or viewing details
+- [x] **VIEW-06
+**: Tapping a task allows completion or viewing details
 
 ### By Area View
 
@@ -219,15 +221,15 @@
 | TASK-06 | Phase 2 | Pending |
 | TASK-07 | Phase 2 | Pending |
 | TASK-08 | Phase 2 | Pending |
-| COMP-01 | Phase 3 | Pending |
-| COMP-02 | Phase 3 | Pending |
-| COMP-03 | Phase 3 | Pending |
-| VIEW-01 | Phase 3 | Pending |
-| VIEW-02 | Phase 3 | Pending |
-| VIEW-03 | Phase 3 | Pending |
-| VIEW-04 | Phase 3 | Pending |
-| VIEW-05 | Phase 3 | Pending |
-| VIEW-06 | Phase 3 | Pending |
+| COMP-01 | Phase 3 | Complete (03-03) |
+| COMP-02 | Phase 3 | Complete (03-01 + 03-03) |
+| COMP-03 | Phase 3 | Complete (03-01) |
+| VIEW-01 | Phase 3 | Complete (03-02) |
+| VIEW-02 | Phase 3 | Complete (03-02) |
+| VIEW-03 | Phase 3 | Complete (03-02) |
+| VIEW-04 | Phase 3 | Complete (03-02) |
+| VIEW-05 | Phase 3 | Complete (03-01 + 03-02) |
+| VIEW-06 | Phase 3 | Complete (03-03) |
 | AREA-V-01 | Phase 5 | Pending |
 | AREA-V-02 | Phase 5 | Pending |
 | AREA-V-03 | Phase 5 | Pending |
