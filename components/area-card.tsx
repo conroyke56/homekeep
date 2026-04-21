@@ -13,7 +13,9 @@ import { cn } from '@/lib/utils';
  * Layout:
  *   - Left accent border at area.color via inline `style` (Tailwind cannot
  *     take a dynamic hex at build time; 4px via `border-l-4`).
- *   - Header row: icon + name + optional "Whole Home" pill.
+ *   - Header row: icon + name. (Previous iterations had a "Whole Home"
+ *     pill on `is_whole_home_system` rows; dropped in Phase 9 as the
+ *     card title already carries that label — the pill was redundant.)
  *   - Counts row: overdue · this week · upcoming. Overdue uses warm-accent
  *     `text-primary` when > 0 (SPEC §19 — warm, not panic-red).
  *   - Coverage row: small flat bar + percentage. Reusing the big
