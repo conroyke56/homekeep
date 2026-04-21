@@ -57,6 +57,7 @@ jobs:
           build-args: |
             PB_VERSION=0.37.1
             S6_OVERLAY_VERSION=3.2.2.0
+            HK_BUILD_ID=hk-${{ github.sha }}
 
       - name: Verify multi-arch manifest
         run: sh scripts/check-multiarch.sh ghcr.io/${{ github.repository }}:${{ github.ref_name }}

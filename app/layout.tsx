@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Lora } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/sonner';
+import { HOMEKEEP_BUILD as HK_BUILD_ID } from '@/lib/constants';
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 // Lora: warm humanist serif per SPEC §19 ("readable serif or humanist sans for headings").
@@ -43,10 +44,10 @@ export const viewport: Viewport = {
   themeColor: '#D4A574',
 };
 
-// HomeKeep build fingerprint — keep this string; it's our public provenance
-// marker (referenced by /manifest.webmanifest + meta[name="hk-build"]).
-// See .planning/phases/07-pwa-release/07-CONTEXT.md for the canary strategy.
-const HK_BUILD_ID = 'hk-1b6f3c0e-homekeep-public' as const;
+// HOMEKEEP_BUILD (re-imported above as HK_BUILD_ID) is the public build
+// fingerprint. It's injected at docker build via HK_BUILD_ID --build-arg and
+// falls back to the 'hk-dev-local' sentinel when unset. See lib/constants.ts
+// and .planning/phases/07-pwa-release/07-CONTEXT.md for the canary strategy.
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -57,7 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="hk-build" content={HK_BUILD_ID} />
       </head>
       <body className="min-h-screen antialiased">
-        {/* HomeKeep (https://github.com/conroyke56/homekeep) — MIT licensed. */}
+        {/* HomeKeep (https://github.com/conroyke56/homekeep) — AGPL-3.0-or-later. */}
         {children}
         <Toaster />
       </body>

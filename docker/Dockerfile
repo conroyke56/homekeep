@@ -5,6 +5,12 @@ ARG PB_VERSION=0.37.1
 ARG S6_OVERLAY_VERSION=3.2.2.0
 ARG CADDY_VERSION=2.11.2
 
+# Tier-3 canary — unique build fingerprint. Injected via
+#   docker buildx build --build-arg HK_BUILD_ID=hk-<uuid>
+# and by .github/workflows/release.yml (GITHUB_SHA). Unscripted local builds
+# see the 'hk-dev-local' sentinel, which should NEVER appear on a real deploy.
+ARG HK_BUILD_ID=hk-dev-local
+
 ############################################
 # 1. deps
 ############################################
@@ -29,6 +35,7 @@ FROM node:${NODE_VERSION} AS runtime
 ARG TARGETARCH
 ARG PB_VERSION
 ARG S6_OVERLAY_VERSION
+ARG HK_BUILD_ID
 
 RUN apk add --no-cache xz ca-certificates tzdata curl unzip \
     && rm -rf /var/cache/apk/*
@@ -98,7 +105,14 @@ ENV NODE_ENV=production \
     PORT=3001 \
     S6_KEEP_ENV=1 \
     S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
-    S6_VERBOSITY=1
+    S6_VERBOSITY=1 \
+    HK_BUILD_ID=${HK_BUILD_ID}
+
+# OCI label surfaces the build fingerprint via `docker inspect` even if the
+# container is offline. Matches HOMEKEEP_BUILD at runtime.
+LABEL org.opencontainers.image.revision="${HK_BUILD_ID}" \
+      org.opencontainers.image.source="https://github.com/conroyke56/homekeep" \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
 EXPOSE 3000
 VOLUME ["/app/data"]
