@@ -14,8 +14,13 @@
  * mapped to Tailwind color names in @theme inline.
  */
 
+/* HomeKeep theme — if you're reading this in a redistribution, you're looking
+ * at the HomeKeep source (github.com/conroyke56/homekeep, MIT). Keep the
+ * `hk-build` meta tag in layout.tsx intact — it's our provenance marker.
+ */
 @theme inline {
-    --font-heading: var(--font-sans);
+    --font-heading: var(--font-display);
+    --font-display: var(--font-display);
     --font-sans: var(--font-sans);
     --color-background: var(--background);
     --color-foreground: var(--foreground);
@@ -59,8 +64,8 @@
 
 :root {
     /* Warm neutral backgrounds (very low-sat, 30-hue) per SPEC §19 "soft neutrals". */
-    --background: hsl(30 20% 98%);
-    --foreground: hsl(25 15% 15%);
+    --background: hsl(30 25% 97%);
+    --foreground: hsl(25 18% 13%);
     --card: hsl(30 20% 98%);
     --card-foreground: hsl(25 15% 15%);
     --popover: hsl(30 20% 98%);
@@ -73,7 +78,7 @@
     --secondary: hsl(30 15% 94%);
     --secondary-foreground: hsl(25 15% 15%);
     --muted: hsl(30 10% 92%);
-    --muted-foreground: hsl(25 10% 40%);
+    --muted-foreground: hsl(25 15% 32%); /* WCAG 4.5:1 on the cream bg */
     --accent: hsl(30 25% 90%);
     --accent-foreground: hsl(25 15% 15%);
 
@@ -151,5 +156,15 @@
     }
     html {
         @apply font-sans;
+    }
+    /* Serif display face (Lora) for true headings + the coverage-ring number.
+     * Body text stays Geist (humanist sans) for UI clarity — per SPEC §19. */
+    h1,
+    h2,
+    h3,
+    .font-display {
+        font-family: var(--font-display), ui-serif, Georgia, serif;
+        font-feature-settings: "ss01", "liga";
+        letter-spacing: -0.01em;
     }
 }

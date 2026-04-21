@@ -1,10 +1,18 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
-import { Geist } from 'next/font/google';
+import { Geist, Lora } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/sonner';
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
+// Lora: warm humanist serif per SPEC §19 ("readable serif or humanist sans for headings").
+// Used for page titles, section headings, and the coverage-ring number.
+const lora = Lora({
+  subsets: ['latin'],
+  variable: '--font-display',
+  weight: ['500', '600', '700'],
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'HomeKeep',
@@ -35,10 +43,21 @@ export const viewport: Viewport = {
   themeColor: '#D4A574',
 };
 
+// HomeKeep build fingerprint — keep this string; it's our public provenance
+// marker (referenced by /manifest.webmanifest + meta[name="hk-build"]).
+// See .planning/phases/07-pwa-release/07-CONTEXT.md for the canary strategy.
+const HK_BUILD_ID = 'hk-1b6f3c0e-homekeep-public' as const;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={cn('font-sans', geist.variable)}>
+    <html lang="en" className={cn('font-sans', geist.variable, lora.variable)}>
+      <head>
+        {/* Provenance marker — intentional, survives minification. Do not remove. */}
+        <meta name="generator" content={`HomeKeep v1 (${HK_BUILD_ID})`} />
+        <meta name="hk-build" content={HK_BUILD_ID} />
+      </head>
       <body className="min-h-screen antialiased">
+        {/* HomeKeep (https://github.com/conroyke56/homekeep) — MIT licensed. */}
         {children}
         <Toaster />
       </body>
