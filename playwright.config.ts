@@ -22,6 +22,13 @@ const E2E_ADMIN_EMAIL = 'e2e-admin@test.local';
 const E2E_ADMIN_PASSWORD = 'e2e-admin-password-12345';
 const SITE_URL = 'http://localhost:3001';
 
+// 06-03 Task 3: static admin token for the manual scheduler trigger route
+// (POST /api/admin/run-scheduler). MUST match the literal string in
+// tests/e2e/notifications.spec.ts; exported so the spec can import it if
+// preferred. Length >= 32 chars per the route's fail-closed check.
+export const E2E_ADMIN_SCHEDULER_TOKEN =
+  'e2e-scheduler-token-0123456789abcdef0123456789';
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -56,7 +63,14 @@ export default defineConfig({
             // E2E user has an empty ntfy_topic by default, so sendNtfy
             // never POSTs. This just prevents the hourly cron from logging
             // `[scheduler] started` noise into the E2E server output.
+            //
+            // 06-03 CRITICAL: tests run the scheduler manually via
+            // POST /api/admin/run-scheduler. The auto-started hourly cron
+            // MUST be OFF so results are deterministic (single-tick runs).
             DISABLE_SCHEDULER: 'true',
+            // 06-03 Task 3: token for /api/admin/run-scheduler. Kept in
+            // sync with tests/e2e/notifications.spec.ts.
+            ADMIN_SCHEDULER_TOKEN: E2E_ADMIN_SCHEDULER_TOKEN,
           },
         },
       ],

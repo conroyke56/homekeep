@@ -238,11 +238,15 @@ test.describe.serial('Suite E: Notifications & Gamification (06-03)', () => {
       'Whole Home',
     );
 
-    // Create a task via UI (freq=1d).
+    // Create a task via UI (freq=1d). Wait for the post-create redirect
+    // so findTaskId sees a committed PB write.
     await page.goto(`/h/${homeId}/tasks/new?areaId=${wholeHomeId}`);
     await page.fill('[name=name]', 'Overdue Kitchen Task');
     await page.fill('[name=frequency_days]', '1');
     await page.click('button:has-text("Create task")');
+    await page.waitForURL(/\/h\/[a-z0-9]{15}\/areas\/[a-z0-9]{15}$/, {
+      timeout: 15_000,
+    });
 
     const taskId = await findTaskId(
       request,
