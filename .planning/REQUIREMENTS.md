@@ -141,9 +141,11 @@
 
 ### Gamification
 
-- [ ] **GAME-01**: Household streak — consecutive weeks with at least one completion
+- [x] **GAME-01
+**: Household streak — consecutive weeks with at least one completion
 - [ ] **GAME-02**: Per-area coverage percentages displayed
-- [ ] **GAME-03**: Weekly summary: "Together you did X tasks. The house is Y% maintained."
+- [x] **GAME-03
+**: Weekly summary: "Together you did X tasks. The house is Y% maintained."
 - [ ] **GAME-04**: Small celebration animation when area first hits 100% coverage
 - [ ] **GAME-05**: "Most neglected" card — the most overdue task, gentle nudge
 

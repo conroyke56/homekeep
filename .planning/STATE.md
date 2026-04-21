@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-04-21T05:25:35.733Z"
+status: executing
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-04-21T05:58:08.546Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 8
-  completed_phases: 6
-  total_plans: 22
-  completed_plans: 22
-  percent: 75
+  completed_phases: 5
+  total_plans: 24
+  completed_plans: 23
+  percent: 96
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** The household's recurring maintenance is visible, evenly distributed, and nothing falls through the cracks — without creating anxiety or guilt.
-**Current focus:** Phase 5 — Views & Onboarding
+**Current focus:** Phase 6 — Notifications & Gamification
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
-Status: Ready to plan
+Phase: 6 (Notifications & Gamification) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-04-21
 
-Progress: [██████████] 100%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ Progress: [██████████] 100%
 | Phase 05 P01 | 11min | 3 tasks | 14 files |
 | Phase 05 P02 | 20min | 3 tasks tasks | 10 files files |
 | Phase 05 P03 | 12min | 3 tasks | 19 files |
+| Phase 06 P01 | 12min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -184,6 +185,11 @@ Recent decisions affecting current work:
 - 05-03: batchCreateSeedTasks uses user-authed pb client (NOT admin) — tasks.createRule gates writes via membership which caller has; keeps security model clean
 - 05-03: tests/e2e excluded from tsconfig paths → onboarding.spec.ts uses relative '../../lib/seed-library' import
 - 05-03: skipOnboardingIfPresent(page) E2E helper centralises backward-compat; 6 older specs patched at createHome call sites
+- 06-01: users ntfy_topic validated at app layer (lib/ntfy.ts topic regex) not via PB pattern field — avoids empty-string backfill mismatch
+- 06-01: notifications.task_id nullable (minSelect:0) so weekly_summary rows carry null; kind↔task partition is caller invariant
+- 06-01: recordNotification/hasNotified swallow ALL errors; DB UNIQUE INDEX is race safety net (two-layer dedupe per D-05)
+- 06-01: detectAreaCelebration uses strict === 1.0 (not epsilon) — computeCoverage is deterministic mean, no FP drift vs canonical values
+- 06-01: Disposable-PB port 18096 claimed for notifications idempotency test; allocation log 18090..18096
 
 ### Pending Todos
 
@@ -202,8 +208,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-21T05:25:16.985Z
-Stopped at: Completed 05-03-PLAN.md
+Last session: 2026-04-21T05:58:08.531Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
 
-**Planned Phase:** 5 (Views & Onboarding) — 3 plans — 2026-04-21T04:27:26.096Z
+**Planned Phase:** 6 (Notifications & Gamification) — 3 plans — 2026-04-21T05:45:07.848Z

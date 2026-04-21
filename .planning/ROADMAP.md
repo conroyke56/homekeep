@@ -141,13 +141,13 @@ Plans:
   3. Household streak increments each week with at least one completion and displays on the main view
   4. A celebration animation plays when an area first hits 100% coverage
   5. Weekly summary notification reports household maintenance status to opted-in users
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: yes
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
-- [ ] 06-03: TBD
+- [ ] 06-01-PLAN.md — PB migrations (users prefs + notifications collection) + pure fns (sendNtfy, computeHouseholdStreak, computeWeeklySummary, detectAreaCelebration, notification ref-cycle builders) + idempotency integration test
+- [ ] 06-02-PLAN.md — node-cron scheduler + instrumentation.ts boot hook + /api/admin/run-scheduler route + sync notification hooks in updateTask/completeTask + updateNotificationPrefs action + .env.example updates
+- [ ] 06-03-PLAN.md — NotificationPrefsForm (replaces Phase 5 placeholder) + HouseholdStreakBadge in dashboard header + MostNeglectedCard between Overdue and This Week + AreaCelebration animation + E2E Suite E (topic → overdue → scheduler → notifications row)
 
 ### Phase 7: PWA & Release
 **Goal**: The app is installable as a PWA on HTTPS deployments, ships with production compose variants, and publishes via CI/CD
@@ -175,5 +175,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 3. Core Loop | 3/3 | Complete    | 2026-04-21 |
 | 4. Collaboration | 3/3 | Complete    | 2026-04-21 |
 | 5. Views & Onboarding | 3/3 | Complete    | 2026-04-21 |
-| 6. Notifications & Gamification | 0/3 | Not started | - |
+| 6. Notifications & Gamification | 1/3 | In progress | - |
 | 7. PWA & Release | 0/2 | Not started | - |
