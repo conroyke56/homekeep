@@ -71,6 +71,20 @@ All runtime configuration is env-driven. Copy `.env.example` to `.env` and edit:
 
 No secrets are hardcoded anywhere in the image. `.env.example` is committed; real `.env` is gitignored.
 
+## Production deployment
+
+LAN-only (port 3000) is the default. For public HTTPS access, two compose overlays ship with HomeKeep and layer on top of the baseline `docker/docker-compose.yml`:
+
+| Variant | Command | When |
+|---|---|---|
+| LAN only | `docker compose -f docker/docker-compose.yml up -d` | Inside the house, no HTTPS needed |
+| Caddy + public domain | `docker compose -f docker/docker-compose.yml -f docker/docker-compose.caddy.yml up -d` | You have a domain + public VPS |
+| Tailscale | `docker compose -f docker/docker-compose.yml -f docker/docker-compose.tailscale.yml up -d` | Private access via your tailnet |
+
+Set `DOMAIN` (Caddy) or `TS_AUTHKEY` (Tailscale) in `.env` before starting the overlay — both are pre-documented in `.env.example`. HTTPS unlocks [installing HomeKeep as a PWA](./docs/pwa-install.md). On HTTP, a dismissible banner inside the app explains which features are unavailable.
+
+See [docs/deployment.md](./docs/deployment.md) for the full guide including prereqs, one-line refresh commands, troubleshooting, and the release/tagging flow (INFR-09).
+
 ### If your host UID is not 1000
 
 The default `node` user inside the container is UID 1000. If your host user has a different UID, use **either** of the following one-time fixes (future versions will honor `PUID`/`PGID` at runtime -- Phase 7):
