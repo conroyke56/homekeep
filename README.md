@@ -94,22 +94,53 @@ docker run -d -p 3000:3000 \
   -v homekeep_data:/app/data \
   -e SITE_URL=http://localhost:3000 \
   -e NTFY_URL=https://ntfy.sh \
-  --name homekeep \
-  ghcr.io/conroyke56/homekeep:1.0.0-rc1
+  --name homekeep --restart unless-stopped \
+  ghcr.io/conroyke56/homekeep:latest
 ```
 
 Open <http://localhost:3000>, sign up, create a home. The PocketBase admin UI lives at `/_/` — on first boot check the container logs for an installer link.
 
+**Pin a version** for reproducible deploys: replace `:latest` with a specific tag like `:1.0.0-rc1`. See [Releases](https://github.com/conroyke56/homekeep/releases) for available tags.
+
 ### Option 2 — `docker compose up` (LAN)
+
+Drop this file anywhere as `docker-compose.yml` — no clone required:
+
+```yaml
+services:
+  homekeep:
+    image: ghcr.io/conroyke56/homekeep:latest
+    container_name: homekeep
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - homekeep_data:/app/data
+    environment:
+      SITE_URL: http://localhost:3000
+      NTFY_URL: https://ntfy.sh
+      TZ: Australia/Perth
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  homekeep_data:
+```
+
+Then `docker compose up -d`. Data lives in the `homekeep_data` named volume — survives restarts and upgrades.
+
+**Or clone the repo** if you want the full LAN/Caddy/Tailscale overlay set:
 
 ```bash
 git clone https://github.com/conroyke56/homekeep.git
 cd homekeep
-cp .env.example docker/.env   # edit docker/.env as needed
+cp .env.example docker/.env   # edit as needed
 docker compose -f docker/docker-compose.yml up -d
 ```
-
-The default compose runs on `HOST_PORT` (3000 by default). Data lives in the `homekeep_data` named volume — survives restarts.
 
 ### Option 3 — HTTPS via Caddy
 
