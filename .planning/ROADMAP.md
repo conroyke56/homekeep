@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Core Loop** - Three-band main view with task completion, coverage ring, and early-completion guard (completed 2026-04-21)
 - [x] **Phase 4: Collaboration** - Share homes via invite links, manage members, cascading task assignment (completed 2026-04-21)
 - [x] **Phase 5: Views & Onboarding** - By Area, Person, and History views plus seed task library wizard (completed 2026-04-21)
-- [ ] **Phase 6: Notifications & Gamification** - ntfy push notifications, scheduler, streaks, and celebrations
+- [x] **Phase 6: Notifications & Gamification** - ntfy push notifications, scheduler, streaks, and celebrations (completed 2026-04-21)
 - [ ] **Phase 7: PWA & Release** - PWA manifest, HTTPS compose variants, graceful degradation, CI/CD publish
 
 ## Phase Details
@@ -145,9 +145,9 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 06-01-PLAN.md — PB migrations (users prefs + notifications collection) + pure fns (sendNtfy, computeHouseholdStreak, computeWeeklySummary, detectAreaCelebration, notification ref-cycle builders) + idempotency integration test
-- [ ] 06-02-PLAN.md — node-cron scheduler + instrumentation.ts boot hook + /api/admin/run-scheduler route + sync notification hooks in updateTask/completeTask + updateNotificationPrefs action + .env.example updates
-- [ ] 06-03-PLAN.md — NotificationPrefsForm (replaces Phase 5 placeholder) + HouseholdStreakBadge in dashboard header + MostNeglectedCard between Overdue and This Week + AreaCelebration animation + E2E Suite E (topic → overdue → scheduler → notifications row)
+- [x] 06-01-PLAN.md — PB migrations (users prefs + notifications collection) + pure fns (sendNtfy, computeHouseholdStreak, computeWeeklySummary, detectAreaCelebration, notification ref-cycle builders) + idempotency integration test
+- [x] 06-02-PLAN.md — node-cron scheduler + instrumentation.ts boot hook + /api/admin/run-scheduler route + sync notification hooks in updateTask/completeTask + updateNotificationPrefs action + .env.example updates
+- [x] 06-03-PLAN.md — NotificationPrefsForm (replaces Phase 5 placeholder) + HouseholdStreakBadge in dashboard header + MostNeglectedCard between Overdue and This Week + AreaCelebration animation + E2E Suite E (topic → overdue → scheduler → notifications row)
 
 ### Phase 7: PWA & Release
 **Goal**: The app is installable as a PWA on HTTPS deployments, ships with production compose variants, and publishes via CI/CD
