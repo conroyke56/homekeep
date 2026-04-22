@@ -253,7 +253,8 @@
 **: computeNextDue consults the latest active (unconsumed) override BEFORE the smoothed-date branch (snooze trumps LOAD)
 - [x] **SNZE-06
 **: Overrides are consumed when the next completion lands after the override date
-- [ ] **SNZE-07**: "From now on" mutates `tasks.anchor_date` (anchored mode) or `tasks.next_due_smoothed` with a marker flag (cycle mode) directly — no override row written. Marker flag detectable by REBAL preservation rules.
+- [x] **SNZE-07
+**: "From now on" mutates `tasks.anchor_date` (anchored mode) or `tasks.next_due_smoothed` with a marker flag (cycle mode) directly — no override row written. Marker flag detectable by REBAL preservation rules.
 - [ ] **SNZE-08**: Snoozing into a dormant season prompts an "Extend the active window?" confirmation dialog
 - [x] **SNZE-09
 **: Coverage ring uses the snoozed (later) next_due (snoozed tasks don't drag coverage down)
@@ -318,7 +319,8 @@
 
 - [ ] **REBAL-01**: Anchored-mode tasks preserved during rebalance (never re-placed)
 - [ ] **REBAL-02**: Tasks with unconsumed `schedule_overrides` rows preserved (snooze user intent wins)
-- [ ] **REBAL-03**: Tasks whose `next_due_smoothed` was last set via SNZE "From now on" preserved (per-task marker flag set by SNZE-07; preservation enforced here)
+- [x] **REBAL-03**: Tasks whose `next_due_smoothed` was last set via SNZE "From now on" preserved (per-task marker flag set by SNZE-07
+; preservation enforced here)
 - [ ] **REBAL-04**: All other tasks re-run through `placeNextDue` with a fresh `computeHouseholdLoad` map
 - [ ] **REBAL-05**: Settings → Scheduling → "Rebalance schedule" button surfaces the action
 - [ ] **REBAL-06**: Preview modal shows counts only — "Will update: N" + "Will preserve: M" with breakdown by preservation reason (anchored / active snooze / "From now on")
