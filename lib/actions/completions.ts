@@ -114,8 +114,14 @@ export async function completeTaskAction(
     // Ownership preflight (T-03-01-01): the tasks viewRule is
     // `home_id.owner_id = @request.auth.id`; a forged id 404s here.
     const task = await pb.collection('tasks').getOne(taskId, {
+      // Phase 11 (WR-02): select the 3 new Phase 11 fields so the
+      // seasonal / OOFT branches in computeNextDue can fire when the
+      // success-toast next-due is computed below. Without due_date /
+      // active_from_month / active_to_month in the projection, the
+      // Task shape arrives with them undefined and the seasonal wake-
+      // up branch silently never triggers for the rendered toast.
       fields:
-        'id,home_id,area_id,frequency_days,schedule_mode,anchor_date,archived,created,name',
+        'id,home_id,area_id,frequency_days,schedule_mode,anchor_date,archived,created,name,due_date,active_from_month,active_to_month',
     });
 
     // 04-02 D-13: completeTaskAction is member-permitted. assertMembership
@@ -361,13 +367,27 @@ export async function completeTaskAction(
         id: task.id,
         created: task.created as string,
         archived: false,
-        frequency_days: task.frequency_days as number,
+        frequency_days: task.frequency_days as number | null,
         schedule_mode: task.schedule_mode as 'cycle' | 'anchored',
         anchor_date: (task.anchor_date as string | null) || null,
+        // Phase 11 (WR-02): seasonal branches need the home-tz anchor
+        // to match the formatInTimeZone rendering below, and the OOFT
+        // branch needs due_date to return a concrete wake-up Date.
+        // Without these fields the shape arrives undefined and the
+        // branches fall through to the natural cycle path silently.
+        active_from_month:
+          (task.active_from_month as number | null) ?? null,
+        active_to_month:
+          (task.active_to_month as number | null) ?? null,
+        due_date: (task.due_date as string | null) ?? null,
       },
       { completed_at: now.toISOString() },
       now,
       undefined,
+      // Phase 11 (WR-02): pass home timezone so seasonal wake-up
+      // anchors to home-tz midnight — matches the formatInTimeZone
+      // rendering on the next line.
+      home.timezone as string,
     );
     const nextDueFormatted = nextDue
       ? formatInTimeZone(nextDue, home.timezone as string, 'MMM d, yyyy')

@@ -77,7 +77,13 @@ export function computeTaskBands(
     if (task.archived) continue;
     const last = latestByTask.get(task.id) ?? null;
     const override = overridesByTask.get(task.id);
-    const nextDue = computeNextDue(task, last, now, override);
+    // Phase 11 (WR-02): thread `timezone` as the 5th arg so seasonal
+    // branches anchor wake-up to home-tz midnight. Without this, a
+    // seasonal task in wake-up anchors to UTC midnight and the
+    // daysDelta comparison against localMidnightTodayUtc (which IS in
+    // home tz) can misclassify the task by one day at the boundary
+    // (e.g. Perth Oct 1 00:00 = Sep 30 16:00 UTC).
+    const nextDue = computeNextDue(task, last, now, override, timezone);
     if (!nextDue) continue;
     const daysDelta =
       (nextDue.getTime() - localMidnightTodayUtc.getTime()) / 86400000;
