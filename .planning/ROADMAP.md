@@ -221,10 +221,12 @@ Plans:
   4. The coverage ring reads the snoozed (later) next-due — a snoozed task does not drag household health down while snoozed
   5. The ntfy scheduler's `ref_cycle` key resolves to the effective (post-override) next-due, so a snoozed task fires exactly one "now overdue" notification on the new date (idempotent re-firing preserved)
   6. All 311 unit + 23 E2E tests pass unchanged (signature extension is additive; default override-less behavior matches v1.0)
-**Plans**: TBD (estimate 2-3)
+**Plans**: 3 plans
 
 Plans:
-- [ ] 10-01: TBD
+- [ ] 10-01-P01-PLAN.md — schedule_overrides migration + helpers (getActiveOverride + getActiveOverridesForHome) + zod schema + unit/integration tests (port 18098)
+- [ ] 10-02-P01-PLAN.md — computeNextDue signature extension (override? param) + thread overridesByTask Map through coverage/band/weekly/area helpers + 3 pages + 2 components + 6 test-file fixture churn
+- [ ] 10-03-P01-PLAN.md — atomic consumption in completeTaskAction via pb.createBatch() + SNZE-06 integration scenarios (happy path + no-op regression)
 
 ### Phase 11: Task Model Extensions
 **Goal**: The task data model and `computeNextDue` absorb one-off semantics, preferred-weekday constraints (as hard narrowing constraint), and seasonal-window dormancy in a single coherent schema pass — no UI work, all scheduler logic unit-tested before any surface shows it. OOFT first-due semantics (OOFT-01..03) are locked by `/gsd-discuss-phase 11` BEFORE plans are written
