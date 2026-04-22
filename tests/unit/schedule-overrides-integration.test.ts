@@ -398,7 +398,13 @@ describe('schedule_overrides (disposable PB, port 18098)', () => {
     const result = await completeTaskAction(t1Id, { force: true });
 
     expect(result).toMatchObject({ ok: true });
-    if (result.ok !== true) throw new Error('unexpected result shape');
+    // Discriminated-union narrow: the `ok:true` arm has `completion`.
+    // `'ok' in result` fails on the `requiresConfirm:true` arm; then the
+    // strict-true check eliminates the `ok:false` arm. TS then narrows
+    // result to the success variant so `.completion` is accessible.
+    if (!('ok' in result) || result.ok !== true) {
+      throw new Error('unexpected result shape');
+    }
     expect(result.completion.id).toBeTruthy();
     expect(result.completion.completed_at).toBeTruthy();
 
@@ -433,7 +439,13 @@ describe('schedule_overrides (disposable PB, port 18098)', () => {
     const result = await completeTaskAction(t3Id, { force: true });
 
     expect(result).toMatchObject({ ok: true });
-    if (result.ok !== true) throw new Error('unexpected result shape');
+    // Discriminated-union narrow: the `ok:true` arm has `completion`.
+    // `'ok' in result` fails on the `requiresConfirm:true` arm; then the
+    // strict-true check eliminates the `ok:false` arm. TS then narrows
+    // result to the success variant so `.completion` is accessible.
+    if (!('ok' in result) || result.ok !== true) {
+      throw new Error('unexpected result shape');
+    }
     expect(result.completion.id).toBeTruthy();
 
     // No orphaned override row should have been created for t3 as a

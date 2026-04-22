@@ -13,6 +13,10 @@ import {
   type CompletionRecord,
 } from '@/lib/completions';
 import { detectAreaCelebration } from '@/lib/area-celebration';
+import {
+  getActiveOverride,
+  getActiveOverridesForHome,
+} from '@/lib/schedule-overrides';
 
 /**
  * Completion server action (03-01 Plan, Pattern 4, Pitfalls 5/6/13).
@@ -20,7 +24,7 @@ import { detectAreaCelebration } from '@/lib/area-celebration';
  * Exports:
  *   - completeTaskAction(taskId, { force? })
  *
- * Security posture (threat_model T-03-01-01..08):
+ * Security posture (threat_model T-03-01-01..08, T-10-02):
  *   - T-03-01-01 Spoofing: ownership preflight via
  *     `pb.collection('tasks').getOne(taskId)`. The tasks collection
  *     viewRule enforces `home_id.owner_id = @request.auth.id` — a
@@ -37,6 +41,23 @@ import { detectAreaCelebration } from '@/lib/area-celebration';
  *     escalation vector.
  *   - T-03-01-08 Business logic (archived task): returns a typed
  *     formError before attempting the write.
+ *   - T-10-02 Tampering (simultaneous-snooze race): the completion
+ *     write and the active-override's consumed_at flip are bundled
+ *     into a single `pb.createBatch().send()` transaction. If any op
+ *     fails, PB rolls BOTH back — no orphaned "completion landed but
+ *     override still active" state possible. If a concurrent writer
+ *     consumed the override between `getActiveOverride` and
+ *     `batch.send`, the update targets an already-consumed row and
+ *     either succeeds (harmless overwrite of consumed_at) or the
+ *     whole batch rolls back — either outcome is safe.
+ *
+ * Phase 10 (D-10 atomic consumption): completeTaskAction batches
+ * `completions.create` with `schedule_overrides.update({consumed_at:
+ * now})` in a single `pb.createBatch().send()` transaction when an
+ * active override exists. Atomicity prevents the "completion landed
+ * but override still active" race — no orphaned state possible on PB
+ * failure (Pitfall 5 mitigation). The read-time D-10 filter in
+ * `computeNextDue` is the defense-in-depth half.
  *
  * Error-shape contract (Pitfall 5):
  *   - Input validation + auth errors → `{ ok: false, formError }`.
@@ -168,16 +189,50 @@ export async function completeTaskAction(
     const areaCompletions = await getCompletionsForHome(pb, areaTaskIds, now);
     const latestBefore = reduceLatestByTask(areaCompletions);
 
-    // Write the completion. `completed_by_id` is server-set from
+    // Phase 10 (D-10 atomic consumption): fetch active overrides BEFORE
+    // the write. Two lookups serve one Map — one for the task-under-
+    // completion (consumed in the same batch, below) and one for the
+    // home-wide Map fed into `detectAreaCelebration` so the celebration
+    // predicate sees the full override state of sibling tasks in the
+    // area (Wave 2 handoff option 2). Both reads fail-open to null /
+    // empty Map; if PB is down the completion write will fail later
+    // anyway and the outer try/catch returns the typed formError.
+    const activeOverride = await getActiveOverride(pb, taskId);
+    const overridesByTask = await getActiveOverridesForHome(pb, homeId);
+
+    // Phase 10 (D-10 atomic consumption, Pitfall 5 mitigation).
+    // Single atomic PB transaction: the completion write PLUS — when an
+    // active override exists — the `consumed_at = now` flip on that
+    // override. If either op fails, PB rolls the whole transaction back
+    // (T-10-02). Exemplars: lib/actions/seed.ts:93, lib/actions/
+    // invites.ts:192. `completed_by_id` is server-set from
     // `pb.authStore` — NEVER from client input (T-03-01-02). PB
     // createRule also enforces the body match as defense-in-depth.
-    const created = await pb.collection('completions').create({
+    const batch = pb.createBatch();
+    batch.collection('completions').create({
       task_id: taskId,
       completed_by_id: userId,
       completed_at: now.toISOString(),
       via: 'tap', // Pitfall 13
       notes: '',
     });
+    if (activeOverride) {
+      batch.collection('schedule_overrides').update(activeOverride.id, {
+        consumed_at: now.toISOString(),
+      });
+    }
+    // PB SDK 0.26.8 `.send()` resolves to `Array<{ status, body }>` in
+    // declaration order (BatchRequestResult — see
+    // node_modules/pocketbase/dist/pocketbase.es.d.ts:1168). Verified
+    // observationally in Plan 10-03 integration Scenario 9: the
+    // completion row's id/completed_at round-trip through results[0]
+    // .body cleanly (A1 resolved — no follow-up getOne needed).
+    const results = await batch.send();
+    const created = results[0].body as {
+      id: string;
+      completed_at: string;
+      task_id: string;
+    };
 
     // 06-02 GAME-04: build the after-snapshot by overlaying the fresh
     // completion on top of latestBefore (don't re-fetch — avoids a
@@ -196,16 +251,22 @@ export async function completeTaskAction(
     let celebration:
       | { kind: 'area-100'; areaId: string; areaName: string }
       | undefined;
-    // 10-02 Plan: pass an empty Map for now — Plan 10-03 will fetch the
-    // home's active overrides inside completeTaskAction (atomic consumption
-    // path). For Plan 10-02, this keeps the celebration predicate byte-
-    // identical to v1.0: no override Map = D-06 default-behavior contract.
+    // Phase 10 (Wave 3): inject the real override Map so the celebration
+    // predicate sees accurate coverage for sibling tasks in the area.
+    // The just-consumed override for `taskId` has already had its
+    // consumed_at flipped in the batch above; `overridesByTask` still
+    // holds its pre-consumption row in-memory, BUT `detectAreaCelebration`
+    // uses `computeAreaCoverage` which calls `computeNextDue` which
+    // applies the D-10 read-time filter — since `latestAfter` now has
+    // the fresh completion at snooze_until's threshold, D-10 stales the
+    // entry correctly. Net: the after-snapshot reflects the consumed
+    // override semantically even though the Map hasn't been re-fetched.
     if (
       detectAreaCelebration(
         tasksInArea,
         latestBefore,
         latestAfter,
-        new Map(),
+        overridesByTask,
         now,
       )
     ) {
@@ -244,7 +305,12 @@ export async function completeTaskAction(
       );
     }
 
-    // Compute next-due for the success toast.
+    // Compute next-due for the success toast. Phase 10 (D-10): pass
+    // `undefined` as the 4th arg — the active override (if any) was
+    // just consumed in the batch above, so the natural next-due is the
+    // correct answer here. Even if the read raced, D-10's read-time
+    // filter (snooze_until > lastCompletion.completed_at) would stale
+    // the just-consumed override since lastCompletion is now === now.
     const nextDue = computeNextDue(
       {
         id: task.id,
@@ -256,6 +322,7 @@ export async function completeTaskAction(
       },
       { completed_at: now.toISOString() },
       now,
+      undefined,
     );
     const nextDueFormatted = nextDue
       ? formatInTimeZone(nextDue, home.timezone as string, 'MMM d, yyyy')
