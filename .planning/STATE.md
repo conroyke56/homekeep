@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Scheduling & Flexibility
 status: executing
-stopped_at: Completed 10-03-P01-PLAN.md — atomic consumption, SNZE-06 green, Phase 10 all 5 REQ-IDs covered
-last_updated: "2026-04-22T05:00:34.433Z"
+stopped_at: Completed 11-01-P01-PLAN.md — A1 resolved, foundation ready for Plan 11-02
+last_updated: "2026-04-22T09:29:33.140Z"
 last_activity: 2026-04-22
 progress:
   total_phases: 19
   completed_phases: 8
-  total_plans: 29
-  completed_plans: 32
+  total_plans: 32
+  completed_plans: 33
   percent: 100
 ---
 
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** The household's recurring maintenance is visible, evenly distributed, and nothing falls through the cracks — without creating anxiety or guilt.
-**Current focus:** Phase 10 — Schedule Override Foundation
+**Current focus:** Phase 11 — Task Model Extensions
 
 ## Current Position
 
-Phase: 10 (Schedule Override Foundation) — EXECUTING
-Plan: 3 of 3
+Phase: 11 (Task Model Extensions) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
 Last activity: 2026-04-22
 
@@ -99,6 +99,7 @@ Progress: [██████████] 100%
 | Phase 09 UX audit fix | ~80min | 14 commits | ~16 files |
 | Phase 10 P02 | 19min | 3 tasks | 21 files |
 | Phase 10 P03 | 15min | 2 tasks | 2 files |
+| Phase 11 P01 | 12min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -269,6 +270,10 @@ Recent decisions affecting current work:
 - 10-03: pb.createBatch() atomic completion + override consumption — SNZE-06 verified; A1 resolved — BatchRequestResult shape is {status, body} with body=full-record; no follow-up getOne needed
 - 10-03: Home-wide override Map fetched alongside single-task helper — serves both consumption write AND detectAreaCelebration (Wave 2 handoff option 2), amortises roundtrip
 - 10-03: Scenario 11 (batch rollback/TOCTOU) deferred per plan OPTIONAL clause — PB atomicity is SDK-level, exercised in seed.ts/invites.ts production paths
+- 11-01: A1 resolved — PB 0.37.1 direct-mutation NumberField.required = false via app.save persists (Wave 0 smoke confirmed)
+- 11-01: Task type widened to frequency_days: number | null; 3 minimal as number casts at UI/coverage projection boundaries absorb the ripple (band-view, task-band, coverage)
+- 11-01: preferredDaysEnum exported from lib/schemas/task.ts for Plan 11-02 + Phase 14/15 form re-use
+- 11-01: 4 pure helpers shipped (effectivePreferredDays, narrowToPreferredDays, isInActiveWindow wrap-aware, nextWindowOpenDate tz-aware); 31 new tests cover PREF/SEAS matrix + zod refinements; 355 baseline → 386 total tests green (D-26 preserved)
 
 ### Pending Todos
 
@@ -294,8 +299,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-22T05:00:34.414Z
-Stopped at: Completed 10-03-P01-PLAN.md — atomic consumption, SNZE-06 green, Phase 10 all 5 REQ-IDs covered
+Last session: 2026-04-22T09:29:33.119Z
+Stopped at: Completed 11-01-P01-PLAN.md — A1 resolved, foundation ready for Plan 11-02
 Resume file: None
 
-**Planned Phase:** 10 (Schedule Override Foundation) — 3 plans — 2026-04-22T04:15:06.406Z
+**Planned Phase:** 11 () — 0 plans — 2026-04-22T09:15:03.968Z

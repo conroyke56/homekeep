@@ -245,7 +245,7 @@ Plans:
 > **Pre-planning gate (rider 2):** Before any Phase 11 plans are written, `/gsd-discuss-phase 11` must debate the three candidate shapes for one-off task first-due semantics — (a) explicit "do by" date required, (b) default `creation + 7 days` editable, (c) separate "To-do" list with promote-to-scheduled. User leans (a). Whichever shape locks into Phase 11 CONTEXT.md becomes the data model for OOFT-01..03.
 
 Plans:
-- [ ] 11-01-P01-PLAN.md — Migration + zod schema + helper scaffolding (4 new nullable fields, frequency_days nullable, effectivePreferredDays/narrowToPreferredDays/isInActiveWindow/nextWindowOpenDate helpers, ~18 unit tests)
+- [x] 11-01-P01-PLAN.md — Migration + zod schema + helper scaffolding (4 new nullable fields, frequency_days nullable, effectivePreferredDays/narrowToPreferredDays/isInActiveWindow/nextWindowOpenDate helpers, 31 unit tests, A1 resolved)
 - [ ] 11-02-P01-PLAN.md — computeNextDue seasonal-dormant/wakeup/OOFT branches (D-16 order), computeCoverage dormant filter, completeTaskAction OOFT auto-archive batch op, ~18 new unit tests
 - [ ] 11-03-P01-PLAN.md — Integration suite on port 18099: 4 scenarios (migration shape, OOFT lifecycle atomic archive, seasonal dormant/wakeup, D-17 override × dormant)
 
