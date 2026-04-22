@@ -69,7 +69,17 @@ export const taskSchema = z
     notes: z.string().max(2000, 'Notes too long').optional().or(z.literal('')),
     // Phase 11 (D-03): OOFT explicit "do by" date. Required when
     // frequency_days is null — enforced by cross-field refine below.
-    due_date: z.string().nullable().optional(),
+    // Phase 15 Plan 02 (T-15-02-02): tighten regex to mirror last_done
+    // (WR-01 from Phase 13). An HTML <input type="date"> always emits
+    // YYYY-MM-DD; crafted form POSTs with garbage ("<script>", etc.)
+    // trip a fieldError here instead of flowing through as Invalid Date
+    // downstream. Keeps optional/nullable so the field may be omitted
+    // for recurring tasks without error.
+    due_date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}/, 'Due date must be a valid date')
+      .nullable()
+      .optional(),
     // Phase 11 (D-07): preferred_days enum. Null reads as 'any' via
     // effectivePreferredDays helper.
     preferred_days: preferredDaysEnum.nullable().optional(),

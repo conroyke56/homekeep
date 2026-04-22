@@ -62,7 +62,20 @@ export async function createTask(
   const rawIcon = String(formData.get('icon') ?? '').trim();
   const rawColor = String(formData.get('color') ?? '').trim();
   const rawAnchor = String(formData.get('anchor_date') ?? '').trim();
-  const rawFreq = Number(formData.get('frequency_days') ?? 0);
+  // Phase 15 (OOFT-04, D-03): read frequency_days as a string so we can
+  // distinguish "absent" / empty (OOFT) from "0" (schema error). The
+  // prior `Number(... ?? 0)` coerced both to 0 and then relied on
+  // isOoftTask's 0-marker branch — works for compute paths but the
+  // Phase 11 zod .min(1) refuses 0, surfacing a confusing "Frequency
+  // must be at least 1 day" for a user who selected One-off. Now empty
+  // → null routes through Phase 11 refine 1 (due_date required) which
+  // surfaces a CORRECT error path ("Due date required for one-off").
+  const rawFreqStr = String(formData.get('frequency_days') ?? '').trim();
+  const rawFreqNum = Number(rawFreqStr);
+  const parsedFreq: number | null =
+    rawFreqStr.length > 0 && Number.isFinite(rawFreqNum) && rawFreqNum > 0
+      ? rawFreqNum
+      : null;
   const rawMode = String(formData.get('schedule_mode') ?? 'cycle').trim();
   const rawAssigned = String(formData.get('assigned_to_id') ?? '').trim();
   // Phase 13 Plan 13-02 (TCSEM-01, TCSEM-02): read the Advanced
@@ -78,13 +91,20 @@ export async function createTask(
   const rawActiveToMonth = String(
     formData.get('active_to_month') ?? '',
   ).trim();
+  // Phase 15 (OOFT-04, D-03, T-15-02-02): read due_date from formData.
+  // Phase 11 migration 1745280001 added the DB field; Phase 15 is the
+  // first writer from the UI (prior waves left it unreachable). The
+  // zod schema's YYYY-MM-DD regex (tightened in this plan's Part B)
+  // rejects crafted garbage like "<script>" at safeParse.
+  const rawDueDate = String(formData.get('due_date') ?? '').trim();
 
   const raw = {
     home_id: String(formData.get('home_id') ?? '').trim(),
     area_id: String(formData.get('area_id') ?? '').trim(),
     name: String(formData.get('name') ?? '').trim(),
     description: rawDesc,
-    frequency_days: Number.isFinite(rawFreq) ? rawFreq : 0,
+    // Phase 15: null for OOFT tasks (see parsedFreq derivation above).
+    frequency_days: parsedFreq,
     schedule_mode: (rawMode === 'anchored' ? 'anchored' : 'cycle') as
       | 'cycle'
       | 'anchored',
@@ -114,6 +134,10 @@ export async function createTask(
       rawActiveToMonth.length > 0 && /^\d+$/.test(rawActiveToMonth)
         ? Number(rawActiveToMonth)
         : null,
+    // Phase 15 (OOFT-04, D-03): empty → null; non-empty routes through
+    // the tightened YYYY-MM-DD regex + Phase 11 refine 1 (required when
+    // frequency_days is null).
+    due_date: rawDueDate.length > 0 ? rawDueDate : null,
   };
 
   const parsed = taskSchema.safeParse(raw);
@@ -299,7 +323,9 @@ export async function createTask(
       area_id: parsed.data.area_id,
       name: parsed.data.name,
       description: parsed.data.description ?? '',
-      frequency_days: parsed.data.frequency_days,
+      // Phase 15 (OOFT-04): null frequency means one-off (Phase 11
+      // migration permits null; PB 0.37.1 stores '' for cleared).
+      frequency_days: parsed.data.frequency_days ?? '',
       schedule_mode: parsed.data.schedule_mode,
       // PB expects ISO-ish strings for date fields; '' is fine for null.
       anchor_date:
@@ -322,6 +348,10 @@ export async function createTask(
       // taskSchema refine 2 upstream.
       active_from_month: parsed.data.active_from_month ?? '',
       active_to_month: parsed.data.active_to_month ?? '',
+      // Phase 15 (OOFT-04, D-03): "do by" date for one-off tasks.
+      // Phase 11 refine 1 already enforces it's non-empty when
+      // frequency_days is null. Recurring tasks write '' (PB null).
+      due_date: parsed.data.due_date ?? '',
     });
   } catch {
     return { ok: false, formError: 'Could not create task' };
@@ -344,7 +374,15 @@ export async function updateTask(
   const rawIcon = String(formData.get('icon') ?? '').trim();
   const rawColor = String(formData.get('color') ?? '').trim();
   const rawAnchor = String(formData.get('anchor_date') ?? '').trim();
-  const rawFreq = Number(formData.get('frequency_days') ?? 0);
+  // Phase 15 (OOFT-04): mirror the createTask parse — empty → null
+  // routes through Phase 11 refine 1. Consolidates the OOFT-vs-recurring
+  // distinction at the form-edge, regardless of entry action.
+  const rawFreqStr = String(formData.get('frequency_days') ?? '').trim();
+  const rawFreqNum = Number(rawFreqStr);
+  const parsedFreq: number | null =
+    rawFreqStr.length > 0 && Number.isFinite(rawFreqNum) && rawFreqNum > 0
+      ? rawFreqNum
+      : null;
   const rawMode = String(formData.get('schedule_mode') ?? 'cycle').trim();
   const rawAssigned = String(formData.get('assigned_to_id') ?? '').trim();
   // Phase 13 Plan 13-02: accept last_done on updateTask's raw parse so
@@ -362,13 +400,17 @@ export async function updateTask(
   const rawActiveToMonth = String(
     formData.get('active_to_month') ?? '',
   ).trim();
+  // Phase 15 (OOFT-04, D-03): due_date is editable on update. Users may
+  // retarget a one-off task's date; Phase 11 refine 1 still enforces
+  // non-empty when frequency_days is null.
+  const rawDueDate = String(formData.get('due_date') ?? '').trim();
 
   const raw = {
     home_id: String(formData.get('home_id') ?? '').trim(),
     area_id: String(formData.get('area_id') ?? '').trim(),
     name: String(formData.get('name') ?? '').trim(),
     description: rawDesc,
-    frequency_days: Number.isFinite(rawFreq) ? rawFreq : 0,
+    frequency_days: parsedFreq,
     schedule_mode: (rawMode === 'anchored' ? 'anchored' : 'cycle') as
       | 'cycle'
       | 'anchored',
@@ -388,6 +430,8 @@ export async function updateTask(
       rawActiveToMonth.length > 0 && /^\d+$/.test(rawActiveToMonth)
         ? Number(rawActiveToMonth)
         : null,
+    // Phase 15 (OOFT-04, D-03): due_date passthrough.
+    due_date: rawDueDate.length > 0 ? rawDueDate : null,
   };
 
   const parsed = taskSchema.safeParse(raw);
@@ -425,7 +469,8 @@ export async function updateTask(
     await pb.collection('tasks').update(taskId, {
       name: parsed.data.name,
       description: parsed.data.description ?? '',
-      frequency_days: parsed.data.frequency_days,
+      // Phase 15 (OOFT-04): null → '' (PB NumberField cleared).
+      frequency_days: parsed.data.frequency_days ?? '',
       schedule_mode: parsed.data.schedule_mode,
       anchor_date:
         parsed.data.schedule_mode === 'anchored'
@@ -442,6 +487,9 @@ export async function updateTask(
       // '' = clear (PB NumberField null).
       active_from_month: parsed.data.active_from_month ?? '',
       active_to_month: parsed.data.active_to_month ?? '',
+      // Phase 15 (OOFT-04, D-03): due_date passthrough. '' = clear
+      // (recurring tasks have no due_date).
+      due_date: parsed.data.due_date ?? '',
       // SECURITY: never accept `archived` from formData on update either.
       // Archive is a separate explicit action.
     });

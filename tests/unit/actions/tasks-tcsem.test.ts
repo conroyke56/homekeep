@@ -257,38 +257,30 @@ describe('createTask TCSEM (Phase 13 Plan 13-01 Task 2)', () => {
     expect(body!.next_due_smoothed ?? '').toEqual('');
   });
 
-  test('Test 4: OOFT (frequency_days=null via empty string form field? schema requires int) — simulate via freq=0 storage quirk path guard', async () => {
-    // The taskSchema requires frequency_days >= 1 for non-anchored, so we
-    // can't directly submit null via formData to reach create. Instead,
-    // this test asserts: the guard skips placement when isOoftTask is
-    // true via the centralized helper. For unit-test purposes we exercise
-    // the anchored-skip branch as a proxy-bypass; the OOFT runtime path
-    // in createTask is gated by isOoftTask({frequency_days}) AFTER zod
-    // validation, so the only realistic zod-valid freq value that triggers
-    // isOoftTask here is... none (schema rejects 0 and null via min(1)).
+  test('Test 4: OOFT freq=0 → empty string form field routes through Phase 15 OOFT path (refine 1 requires due_date)', async () => {
+    // Phase 15 Plan 02 (OOFT-04) update: the createTask raw-parse now
+    // converts empty/non-positive frequency_days strings to null BEFORE
+    // safeParse (rather than coercing to 0 and tripping schema.min(1)).
+    // This enables the Phase 15 form toggle's "One-off" submission path,
+    // where frequency_days is intentionally omitted in favor of due_date.
     //
-    // So this test instead asserts: the CODE PATH skips placement for
-    // OOFT at runtime even if a hypothetical freq=0 slipped past (defense
-    // in depth). We do this by asserting that when freq validates as
-    // null (we patch the mock schema parse via direct call) — the logic
-    // skips. Since schema gates it, this acts as a runtime-contract test:
-    // the guard lives in the action and the correct predicate is wired.
-    //
-    // Concrete assertion: zod rejects freq=0, so we assert the action
-    // returns fieldErrors and never calls create — proving OOFT shape is
-    // unreachable through the happy path (which aligns with TCSEM-07
-    // "v1.0 tasks unchanged — no migration"). Phase 14+ OOFT form UI
-    // will unlock the null-freq path.
+    // Contract for Phase 15+: freq=0 (or empty) + no due_date → Phase 11
+    // refine 1 fires ("Due date required for one-off tasks"), fieldError
+    // surfaces under `due_date`, no create call.
+    // Prior Phase 13 contract (freq=0 → frequency_days fieldError) was
+    // a Phase-13-only artifact awaiting the Phase 15 OOFT form UI, per
+    // the original test comment: "Phase 14+ OOFT form UI will unlock
+    // the null-freq path."
     const createTask = await loadCreateTask();
     const result = await createTask(
       { ok: false },
       baseFormData({ frequency_days: '0' }),
     );
 
-    // Schema rejects freq=0 — result carries fieldErrors; no create call.
     expect(result).toBeDefined();
     if (result && 'fieldErrors' in result) {
-      expect(result.fieldErrors?.frequency_days).toBeDefined();
+      // Phase 15: the error is on due_date (refine 1), not frequency_days.
+      expect(result.fieldErrors?.due_date).toBeDefined();
     }
     expect(mockCreate).not.toHaveBeenCalled();
     expect(mockPlaceNextDue).not.toHaveBeenCalled();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { isInActiveWindow } from '@/lib/task-scheduling';
+import { isInActiveWindow, isOoftTask } from '@/lib/task-scheduling';
 import { cn } from '@/lib/utils';
 
 /**
@@ -52,7 +52,10 @@ type TaskRecord = {
   area_id: string;
   name: string;
   description?: string;
-  frequency_days: number;
+  // Phase 15 (OOFT-04, D-01): frequency_days is nullable at the Task
+  // type (Phase 11) — one-off tasks carry null. Edit-form must tolerate
+  // the nullable shape so switching to One-off doesn't coerce to 0.
+  frequency_days: number | null;
   schedule_mode: 'cycle' | 'anchored';
   anchor_date: string | null;
   notes?: string;
@@ -68,6 +71,10 @@ type TaskRecord = {
   // a heater serviced on a fixed Nov 1 anchor with Oct-Mar window).
   active_from_month?: number | null;
   active_to_month?: number | null;
+  // Phase 15 (OOFT-04, D-03): one-off "do by" date surfaced on the
+  // form when task_type toggle is "One-off". Phase 11 migration added
+  // the field; Phase 15 finally exposes it in the edit form.
+  due_date?: string | null;
 };
 
 const QUICK_SELECT: { label: string; days: number }[] = [
@@ -137,6 +144,16 @@ export function TaskForm({
       ? task.assigned_to_id
       : '';
 
+  // Phase 15 (OOFT-04, D-01): derive the initial task_type from an
+  // existing task's frequency_days shape. v1.0 rows store frequency > 0;
+  // OOFT rows carry null (app semantic) OR 0 (PB 0.37.1 cleared-field
+  // storage) — see isOoftTask for the centralized marker. Create mode
+  // defaults to 'recurring' so the user flips into One-off explicitly.
+  const initialTaskType: 'recurring' | 'one-off' =
+    task && isOoftTask({ frequency_days: task.frequency_days })
+      ? 'one-off'
+      : 'recurring';
+
   const {
     register,
     control,
@@ -151,7 +168,15 @@ export function TaskForm({
       area_id: defaultAreaId,
       name: task?.name ?? '',
       description: task?.description ?? '',
-      frequency_days: task?.frequency_days ?? 7,
+      // Phase 15 (OOFT-04, D-01): if the existing task is OOFT, seed
+      // frequency_days with null so switching back to Recurring starts
+      // from a clean 7-day default via the toggle handler.
+      frequency_days:
+        task === undefined
+          ? 7
+          : isOoftTask({ frequency_days: task.frequency_days })
+            ? null
+            : (task.frequency_days ?? 7),
       schedule_mode: task?.schedule_mode ?? 'cycle',
       anchor_date: defaultAnchor || null,
       assigned_to_id: defaultAssigned,
@@ -166,8 +191,19 @@ export function TaskForm({
       // seeds from the task record if present.
       active_from_month: task?.active_from_month ?? null,
       active_to_month: task?.active_to_month ?? null,
+      // Phase 15 (OOFT-04, D-03): seed due_date for edit-mode OOFT rows.
+      due_date: task?.due_date ?? null,
     },
   });
+
+  // Phase 15 (OOFT-04, D-01): UI-only toggle state, not part of the
+  // schema. Controls conditional reveals (Recurring → frequency +
+  // schedule_mode + anchor; One-off → due_date). The toggle handlers
+  // force matching schema state to keep Phase 11 refine 3 (OOFT +
+  // anchored incompatible) from tripping on submit.
+  const [taskType, setTaskType] = useState<'recurring' | 'one-off'>(
+    initialTaskType,
+  );
 
   const router = useRouter();
 
@@ -193,10 +229,78 @@ export function TaskForm({
   const anchorError =
     errors.anchor_date?.message ?? serverFieldErrors?.anchor_date?.[0];
   const notesError = errors.notes?.message ?? serverFieldErrors?.notes?.[0];
+  // Phase 15 (OOFT-04, D-03): due_date error surfaces from the Phase 11
+  // refine 1 (required-when-ooft) or from the Phase 15 regex tightening
+  // in lib/schemas/task.ts.
+  const dueDateError =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (errors as any).due_date?.message ?? serverFieldErrors?.due_date?.[0];
 
   return (
     <form action={formAction} className="space-y-4" noValidate>
       <input type="hidden" name="home_id" value={homeId} />
+
+      {/* Phase 15 (OOFT-04, D-01): Recurring vs One-off toggle at top
+          of the form. State-driven reveals:
+            Recurring → frequency input + schedule_mode radios + anchor
+            One-off   → due_date input; frequency/schedule_mode hidden
+          D-02: one-off + anchored incompatible — switching to One-off
+          forces schedule_mode='cycle' so Phase 11 refine 3 never trips. */}
+      <div className="space-y-1.5" data-task-type-toggle>
+        <Label>Task type</Label>
+        <div
+          className="flex gap-4"
+          role="radiogroup"
+          aria-label="Task type"
+        >
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="task_type_ui"
+              value="recurring"
+              checked={taskType === 'recurring'}
+              onChange={() => {
+                setTaskType('recurring');
+                // D-01: restore a sensible default frequency when
+                // switching back from one-off. 7d matches the create-mode
+                // default so the user doesn't see an empty input.
+                const restored =
+                  task && !isOoftTask({ frequency_days: task.frequency_days })
+                    ? (task.frequency_days ?? 7)
+                    : 7;
+                setValue('frequency_days', restored, { shouldValidate: true });
+                // Clear the one-off due_date when reverting (avoids a
+                // phantom "Due date required" refine after the second
+                // toggle flip).
+                setValue('due_date', null, { shouldValidate: false });
+              }}
+            />
+            <span>Recurring</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="task_type_ui"
+              value="one-off"
+              checked={taskType === 'one-off'}
+              onChange={() => {
+                setTaskType('one-off');
+                // D-02: one-off + anchored incompatible. Flip
+                // schedule_mode to 'cycle' so Phase 11 refine 3 never
+                // trips from the UI path, then null out frequency_days
+                // to mark the OOFT branch.
+                setValue('schedule_mode', 'cycle', { shouldValidate: true });
+                setValue(
+                  'frequency_days',
+                  null as unknown as number,
+                  { shouldValidate: true },
+                );
+              }}
+            />
+            <span>One-off</span>
+          </label>
+        </div>
+      </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="task-name">Name</Label>
@@ -263,99 +367,152 @@ export function TaskForm({
         </p>
       </div>
 
-      <div className="space-y-1.5">
-        <Label>Frequency</Label>
-        {/* CRITICAL: these buttons are explicitly type="button". Native
-            <button> inside a <form> defaults to type="submit", which
-            would submit the form mid-fill on click (plan verification
-            called this out as a real bug risk). */}
-        <div className="flex flex-wrap gap-2">
-          {QUICK_SELECT.map((q) => (
-            <Button
-              key={q.label}
-              type="button"
-              variant={freqValue === q.days ? 'default' : 'outline'}
-              size="sm"
-              onClick={() =>
-                setValue('frequency_days', q.days, { shouldValidate: true })
-              }
-            >
-              {q.label}
-            </Button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <Input
-            id="task-freq"
-            type="number"
-            min={1}
-            step={1}
-            aria-invalid={!!freqError}
-            className={cn('w-28')}
-            {...register('frequency_days', { valueAsNumber: true })}
-          />
-          <span className="text-sm text-muted-foreground">days</span>
-        </div>
-        {freqError && (
-          <p className="text-sm text-destructive">{freqError}</p>
-        )}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label>Schedule mode</Label>
-        <Controller
-          control={control}
-          name="schedule_mode"
-          render={({ field }) => (
-            <div className="flex gap-4" role="radiogroup" aria-label="Schedule mode">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="schedule_mode"
-                  value="cycle"
-                  checked={field.value === 'cycle'}
-                  onChange={() => field.onChange('cycle')}
-                />
-                <span>Cycle (from last completion)</span>
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="schedule_mode"
-                  value="anchored"
-                  checked={field.value === 'anchored'}
-                  onChange={() => field.onChange('anchored')}
-                />
-                <span>Anchored (fixed calendar cycles)</span>
-              </label>
-            </div>
-          )}
-        />
-      </div>
-
-      {scheduleMode === 'anchored' && (
+      {/* Phase 15 (OOFT-04, D-01): Frequency only shown for Recurring
+          tasks. One-off tasks carry frequency_days=null and surface the
+          Do-by date field instead (rendered below this block). */}
+      {taskType === 'recurring' && (
         <div className="space-y-1.5">
-          <Label htmlFor="task-anchor">Anchor date</Label>
+          <Label htmlFor="task-freq">Frequency</Label>
+          {/* CRITICAL: these buttons are explicitly type="button". Native
+              <button> inside a <form> defaults to type="submit", which
+              would submit the form mid-fill on click (plan verification
+              called this out as a real bug risk). */}
+          <div className="flex flex-wrap gap-2">
+            {QUICK_SELECT.map((q) => (
+              <Button
+                key={q.label}
+                type="button"
+                variant={freqValue === q.days ? 'default' : 'outline'}
+                size="sm"
+                onClick={() =>
+                  setValue('frequency_days', q.days, { shouldValidate: true })
+                }
+              >
+                {q.label}
+              </Button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              id="task-freq"
+              type="number"
+              min={1}
+              step={1}
+              aria-invalid={!!freqError}
+              className={cn('w-28')}
+              {...register('frequency_days', { valueAsNumber: true })}
+            />
+            <span className="text-sm text-muted-foreground">days</span>
+          </div>
+          {freqError && (
+            <p className="text-sm text-destructive">{freqError}</p>
+          )}
+        </div>
+      )}
+
+      {/* Phase 15 (OOFT-04, D-03): Due-date input — only shown for
+          one-off tasks. Required by Phase 11 refine 1 (frequency_days
+          null → due_date non-empty). */}
+      {taskType === 'one-off' && (
+        <div className="space-y-1.5">
+          <Label htmlFor="task-due-date">Do by (required)</Label>
           <Controller
             control={control}
-            name="anchor_date"
+            name="due_date"
             render={({ field }) => (
               <Input
-                id="task-anchor"
+                id="task-due-date"
                 type="date"
-                aria-invalid={!!anchorError}
                 value={field.value ?? ''}
                 onChange={(e) =>
-                  field.onChange(e.target.value.length > 0 ? e.target.value : null)
+                  field.onChange(
+                    e.target.value.length > 0 ? e.target.value : null,
+                  )
                 }
-                name="anchor_date"
+                name="due_date"
+                aria-invalid={!!dueDateError}
               />
             )}
           />
-          {anchorError && (
-            <p className="text-sm text-destructive">{anchorError}</p>
+          {dueDateError && (
+            <p className="text-sm text-destructive">{dueDateError}</p>
           )}
+          <p className="text-xs text-muted-foreground">
+            One-off tasks disappear once completed.
+          </p>
         </div>
+      )}
+
+      {/* Phase 15 (OOFT-04, D-02): Schedule mode radio + anchor date are
+          hidden entirely when taskType === 'one-off'. D-02 says
+          Anchored is incompatible with One-off; the form-state toggle
+          handler also forces schedule_mode to 'cycle' when switching
+          into One-off so Phase 11 refine 3 can never trip from the UI. */}
+      {taskType === 'recurring' && (
+        <>
+          <div className="space-y-1.5">
+            <Label>Schedule mode</Label>
+            <Controller
+              control={control}
+              name="schedule_mode"
+              render={({ field }) => (
+                <div
+                  className="flex gap-4"
+                  role="radiogroup"
+                  aria-label="Schedule mode"
+                >
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="schedule_mode"
+                      value="cycle"
+                      checked={field.value === 'cycle'}
+                      onChange={() => field.onChange('cycle')}
+                    />
+                    <span>Cycle (from last completion)</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="schedule_mode"
+                      value="anchored"
+                      checked={field.value === 'anchored'}
+                      onChange={() => field.onChange('anchored')}
+                    />
+                    <span>Anchored (fixed calendar cycles)</span>
+                  </label>
+                </div>
+              )}
+            />
+          </div>
+
+          {scheduleMode === 'anchored' && (
+            <div className="space-y-1.5">
+              <Label htmlFor="task-anchor">Anchor date</Label>
+              <Controller
+                control={control}
+                name="anchor_date"
+                render={({ field }) => (
+                  <Input
+                    id="task-anchor"
+                    type="date"
+                    aria-invalid={!!anchorError}
+                    value={field.value ?? ''}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value.length > 0 ? e.target.value : null,
+                      )
+                    }
+                    name="anchor_date"
+                  />
+                )}
+              />
+              {anchorError && (
+                <p className="text-sm text-destructive">{anchorError}</p>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {/*
