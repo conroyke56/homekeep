@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Scheduling & Flexibility
 status: executing
-stopped_at: Completed 12-01-P01-PLAN.md — Phase 12 Wave 1 pure helpers shipped; 434 tests green
-last_updated: "2026-04-22T11:07:50.170Z"
+stopped_at: Completed 12-02-P01-PLAN.md — Phase 12 Wave 2 smoothed branch + LOAD-15 hard gate (21/21 green); 455 tests total
+last_updated: "2026-04-22T11:19:56.358Z"
 last_activity: 2026-04-22
 progress:
   total_phases: 19
   completed_phases: 9
   total_plans: 36
-  completed_plans: 36
+  completed_plans: 37
   percent: 100
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 12 (Load-Smoothing Engine) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-22
 
@@ -102,6 +102,7 @@ Progress: [██████████] 100%
 | Phase 11 P01 | 12min | 3 tasks | 7 files |
 | Phase 11 P03 | ~12min | 1 tasks | 4 files |
 | Phase 12 P01 | 8min | 3 tasks | 5 files |
+| Phase 12 P02 | 8min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -281,6 +282,9 @@ Recent decisions affecting current work:
 - Phase 12 Wave 1: isOoftTask helper exported from lib/task-scheduling.ts — centralizes Phase 11 Rule-1 OOFT marker (null || 0) across 4 callsites (computeNextDue, completeTaskAction, load-smoothing NEW, Phase 13 createTaskAction FUTURE)
 - Phase 12 Wave 1: placeNextDue 5-arg signature (task, lastCompletion, householdLoad, now, options) — matches Phase 13 TCSEM D-21 contract with explicit lastCompletion (null for creation)
 - Phase 12 Wave 1: computeHouseholdLoad 6-arg with pre-loaded Maps (latestByTask, overridesByTask) — preserves pure-helper no-I/O contract; caller does the PB fetch (Wave 3 pattern)
+- 12-02: smoothed branch inserted at D-02 position (override → smoothed → seasonal) — T-12-07 Invalid Date guard via smoothed.getTime() > 0; D-15 handshake inline via treatAsWakeup; LOAD-06 anchored-bypass guard authoritative
+- 12-02: LOAD-15 hard gate cleared — 21/21 branch composition matrix tests green on first run; test suite 434 → 455; zero auto-fixes needed
+- 12-02: Plan 12-01 T7 (load-smoothing.test.ts) flipped per Wave-1 SUMMARY handoff — computeHouseholdLoad now contributes on smoothed date when set (was natural-only in Wave 1 transient)
 
 ### Pending Todos
 
@@ -306,8 +310,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-22T11:07:40.266Z
-Stopped at: Completed 12-01-P01-PLAN.md — Phase 12 Wave 1 pure helpers shipped; 434 tests green
+Last session: 2026-04-22T11:19:56.341Z
+Stopped at: Completed 12-02-P01-PLAN.md — Phase 12 Wave 2 smoothed branch + LOAD-15 hard gate (21/21 green); 455 tests total
 Resume file: None
 
 **Planned Phase:** 12 () — 0 plans — 2026-04-22T10:54:34.569Z

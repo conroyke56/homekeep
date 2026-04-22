@@ -383,7 +383,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 9. UX Audit Fix | 1/1 | Complete    | 2026-04-21 |
 | 10. Schedule Override Foundation | 0/3 | Not started | - |
 | 11. Task Model Extensions | 0/4 | Not started | - |
-| 12. Load-Smoothing Engine | 0/5 | Not started | - |
+| 12. Load-Smoothing Engine | 2/4 | In progress | - |
 | 13. Task Creation Semantics | 0/3 | Not started | - |
 | 14. Seasonal UI & Seed Library | 0/3 | Not started | - |
 | 15. One-Off & Reschedule UI | 0/3 | Not started | - |
