@@ -2,7 +2,7 @@
 // HomeKeep (c) 2026 — github.com/conroyke56/homekeep
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatInTimeZone } from 'date-fns-tz';
 import { toast } from 'sonner';
@@ -117,14 +117,12 @@ export function RescheduleActionSheet({
   const [radio, setRadio] = useState<'just-this-time' | 'from-now-on'>(
     'just-this-time',
   );
-
-  // Keep pickedDate in sync when task/lastCompletion changes across
-  // re-opens (e.g. long-press a different task, close, long-press again —
-  // same component instance, different task props). Effect is cheap;
-  // defaultDateStr is a derived string so the dep array is stable.
-  useEffect(() => {
-    setPickedDate(defaultDateStr);
-  }, [defaultDateStr]);
+  // Note: no effect to sync defaultDateStr → pickedDate. Callers
+  // (BandView / PersonTaskList) render this component with a
+  // `{rescheduleTaskId && (...)}` gate — unmount on close + fresh mount
+  // on next open means the initial state already reflects the latest
+  // task. Avoiding the sync-setState-in-effect pattern dodges the
+  // react-compiler "cascading renders" warning, too.
 
   function isCrossWindow(date: string): boolean {
     if (task.active_from_month == null || task.active_to_month == null) {

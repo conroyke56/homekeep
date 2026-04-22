@@ -17,6 +17,7 @@ import {
 } from '@/lib/band-classification';
 import { computeCoverage } from '@/lib/coverage';
 import { completeTaskAction } from '@/lib/actions/completions';
+import { updateTask } from '@/lib/actions/tasks';
 import { CoverageRing } from '@/components/coverage-ring';
 import { TaskBand } from '@/components/task-band';
 import { HorizonStrip } from '@/components/horizon-strip';
@@ -25,6 +26,7 @@ import {
   type GuardState,
 } from '@/components/early-completion-dialog';
 import { TaskDetailSheet } from '@/components/task-detail-sheet';
+import { RescheduleActionSheet } from '@/components/reschedule-action-sheet';
 import { AreaCelebration } from '@/components/area-celebration';
 import { MostNeglectedCard } from '@/components/most-neglected-card';
 import { DormantTaskRow } from '@/components/dormant-task-row';
@@ -159,6 +161,13 @@ export function BandView({
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [guardState, setGuardState] = useState<GuardState | null>(null);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  // Phase 15 Plan 02 (D-05): Reschedule entry point mirrors the detail
+  // sheet state. TaskDetailSheet's footer Reschedule button closes the
+  // detail sheet (Pitfall 12) then sets this id, which opens the
+  // <RescheduleActionSheet/> rendered below.
+  const [rescheduleTaskId, setRescheduleTaskId] = useState<string | null>(
+    null,
+  );
   const [, startTransition] = useTransition();
   // 06-03 GAME-04: celebration overlay state. Server action
   // completeTaskAction returns `celebration: {kind:'area-100', areaName}`
@@ -491,7 +500,52 @@ export function BandView({
         timezone={timezone}
         homeId={homeId}
         onComplete={(id) => handleTap(id)}
+        onReschedule={(id) => setRescheduleTaskId(id)}
       />
+
+      {/* Phase 15 Plan 02 (SNZE-01, D-05): RescheduleActionSheet opened
+          from the detail sheet's Reschedule footer button. D-12 the
+          onExtendWindow handler widens tasks.active_from/to via the
+          existing updateTask server action — we build a minimal FormData
+          carrying all required taskSchema fields so safeParse passes on
+          the server. T-15-02-07 EoP mitigation: newFrom/newTo are
+          already bounded 1..12 inside the sheet. */}
+      {rescheduleTaskId &&
+        (() => {
+          const rt = tasks.find((t) => t.id === rescheduleTaskId);
+          if (!rt) return null;
+          const rtLastList =
+            lastCompletionsByTaskId[rescheduleTaskId] ?? [];
+          const rtLast =
+            rtLastList.length > 0
+              ? { completed_at: rtLastList[0].completed_at }
+              : null;
+          return (
+            <RescheduleActionSheet
+              open={true}
+              onOpenChange={(o) => !o && setRescheduleTaskId(null)}
+              task={rt as unknown as Task & { name: string }}
+              lastCompletion={rtLast}
+              timezone={timezone}
+              onExtendWindow={async (newFrom, newTo) => {
+                const fd = new FormData();
+                fd.set('home_id', homeId);
+                fd.set('area_id', rt.area_id);
+                fd.set('name', rt.name);
+                fd.set(
+                  'frequency_days',
+                  rt.frequency_days == null ? '' : String(rt.frequency_days),
+                );
+                fd.set('schedule_mode', rt.schedule_mode);
+                if (rt.anchor_date) fd.set('anchor_date', rt.anchor_date);
+                fd.set('active_from_month', String(newFrom));
+                fd.set('active_to_month', String(newTo));
+                if (rt.due_date) fd.set('due_date', rt.due_date);
+                await updateTask(rt.id, { ok: false }, fd);
+              }}
+            />
+          );
+        })()}
     </div>
   );
 }

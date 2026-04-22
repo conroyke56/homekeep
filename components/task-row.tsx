@@ -34,6 +34,14 @@ import { AssigneeDisplay } from '@/components/assignee-display';
  *     the whole row is the long-press target (not just a corner).
  *     onDetail is backward-compatible — existing call sites that
  *     omit it get the 03-02 behaviour unchanged.
+ *
+ * Reschedule (Phase 15 Plan 02, D-05, D-17):
+ *   - Reschedule is NOT a per-row menu button. It lives behind the
+ *     detail sheet (BandView path) or behind the long-press onDetail
+ *     handler (PersonTaskList path — no detail sheet there by design).
+ *     Keeping the primary tap = completion preserves SPEC §19
+ *     "information, not alarm." A future plan may add a row-level
+ *     dropdown menu via a separate component — out of scope for 15-02.
  */
 export function TaskRow({
   task,

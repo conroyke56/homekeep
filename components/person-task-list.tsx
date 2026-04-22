@@ -15,6 +15,7 @@ import {
   type ClassifiedTask,
 } from '@/lib/band-classification';
 import { completeTaskAction } from '@/lib/actions/completions';
+import { updateTask } from '@/lib/actions/tasks';
 import { TaskBand } from '@/components/task-band';
 import { HorizonStrip } from '@/components/horizon-strip';
 import { DormantTaskRow } from '@/components/dormant-task-row';
@@ -23,6 +24,7 @@ import {
   EarlyCompletionDialog,
   type GuardState,
 } from '@/components/early-completion-dialog';
+import { RescheduleActionSheet } from '@/components/reschedule-action-sheet';
 import { Card, CardContent } from '@/components/ui/card';
 
 /**
@@ -82,6 +84,14 @@ export function PersonTaskList({
   );
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [guardState, setGuardState] = useState<GuardState | null>(null);
+  // Phase 15 Plan 02 (D-05): Reschedule entry point on the Person view.
+  // The Person view has no TaskDetailSheet by design ("what's on my
+  // plate now", not metadata browsing — see file-header JSDoc), so the
+  // long-press / context-menu onDetail handler wires directly to
+  // setRescheduleTaskId instead of routing through a detail sheet.
+  const [rescheduleTaskId, setRescheduleTaskId] = useState<string | null>(
+    null,
+  );
   const [, startTransition] = useTransition();
 
   const [optimisticCompletions, addOptimisticCompletion] = useOptimistic(
@@ -213,6 +223,7 @@ export function PersonTaskList({
             label="Overdue"
             tasks={overdueWithName}
             onComplete={(id) => handleTap(id)}
+            onDetail={(id) => setRescheduleTaskId(id)}
             pendingTaskId={pendingTaskId}
             timezone={timezone}
             variant="overdue"
@@ -222,6 +233,7 @@ export function PersonTaskList({
             label="This Week"
             tasks={thisWeekWithName}
             onComplete={(id) => handleTap(id)}
+            onDetail={(id) => setRescheduleTaskId(id)}
             pendingTaskId={pendingTaskId}
             timezone={timezone}
             variant="thisWeek"
@@ -269,6 +281,48 @@ export function PersonTaskList({
           onCancel={handleGuardCancel}
         />
       )}
+
+      {/* Phase 15 Plan 02 (SNZE-01, D-05): RescheduleActionSheet wired
+          from the long-press / context-menu onDetail path above. Person
+          scope skips the TaskDetailSheet intermediate (design note in
+          file header); long-press opens the sheet directly. D-12
+          onExtendWindow widens tasks.active_from/to via updateTask. */}
+      {rescheduleTaskId &&
+        (() => {
+          const rt = tasks.find((t) => t.id === rescheduleTaskId);
+          if (!rt) return null;
+          const latestRow = latestByTask.get(rescheduleTaskId);
+          const rtLast = latestRow
+            ? { completed_at: latestRow.completed_at }
+            : null;
+          return (
+            <RescheduleActionSheet
+              open={true}
+              onOpenChange={(o) => !o && setRescheduleTaskId(null)}
+              task={rt as unknown as Task & { name: string }}
+              lastCompletion={rtLast}
+              timezone={timezone}
+              onExtendWindow={async (newFrom, newTo) => {
+                const fd = new FormData();
+                fd.set('home_id', homeId);
+                fd.set('area_id', rt.area_id);
+                fd.set('name', rt.name);
+                fd.set(
+                  'frequency_days',
+                  rt.frequency_days == null
+                    ? ''
+                    : String(rt.frequency_days),
+                );
+                fd.set('schedule_mode', rt.schedule_mode);
+                if (rt.anchor_date) fd.set('anchor_date', rt.anchor_date);
+                fd.set('active_from_month', String(newFrom));
+                fd.set('active_to_month', String(newTo));
+                if (rt.due_date) fd.set('due_date', rt.due_date);
+                await updateTask(rt.id, { ok: false }, fd);
+              }}
+            />
+          );
+        })()}
     </div>
   );
 }

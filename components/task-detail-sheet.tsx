@@ -56,6 +56,7 @@ export function TaskDetailSheet({
   timezone,
   homeId,
   onComplete,
+  onReschedule,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -74,6 +75,13 @@ export function TaskDetailSheet({
   timezone: string;
   homeId: string;
   onComplete: (taskId: string) => void;
+  /**
+   * Phase 15 Plan 02 (D-05): optional Reschedule callback. When
+   * provided, the footer renders a Reschedule button that closes
+   * this sheet (Pitfall 12 pattern — avoid duelling focus traps with
+   * the subsequent RescheduleActionSheet) before invoking the handler.
+   */
+  onReschedule?: (taskId: string) => void;
 }) {
   const isDesktop = useIsDesktop();
   const [, startTransition] = useTransition();
@@ -154,6 +162,24 @@ export function TaskDetailSheet({
             <Button asChild variant="outline">
               <Link href={`/h/${homeId}/tasks/${task.id}`}>Edit</Link>
             </Button>
+            {/* Phase 15 Plan 02 (D-05): Reschedule entry point — only
+                rendered when a caller wires onReschedule. Closes the
+                sheet BEFORE firing the callback (Pitfall 12 precedent
+                from the Complete button — avoid duelling focus traps
+                with the subsequent RescheduleActionSheet). */}
+            {onReschedule && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  onOpenChange(false);
+                  onReschedule(task.id);
+                }}
+                data-testid="detail-reschedule"
+              >
+                Reschedule
+              </Button>
+            )}
             <Button
               type="button"
               variant="destructive"
