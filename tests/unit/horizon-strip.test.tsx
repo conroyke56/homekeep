@@ -103,38 +103,44 @@ describe('HorizonStrip', () => {
     expect(julBtn!.getAttribute('data-month-count')).toBe('1');
   });
 
-  it('renders 3 dots when a month has exactly 3 tasks and no overflow label', () => {
-    const tasks = [
+  it('tracks data-month-count regardless of the number of tasks (Phase 16: dots + +N overflow replaced by density tint per D-01)', () => {
+    // Phase 16 Plan 01 swapped the per-cell 3-dot render + `+N` overflow
+    // label for a bg-primary/{10,30,50} density tint. `data-month-count`
+    // remains the load-bearing E2E hook — assert both the 3-task and
+    // 5-task cases surface the correct count attribute.
+    const tasks3 = [
       mkTask('a', 'A', new Date('2026-06-05T00:00:00Z')),
       mkTask('b', 'B', new Date('2026-06-15T00:00:00Z')),
       mkTask('c', 'C', new Date('2026-06-25T00:00:00Z')),
     ];
-    const { container } = render(
-      <HorizonStrip tasks={tasks} now={now} timezone={tz} />,
+    const { container: c3 } = render(
+      <HorizonStrip tasks={tasks3} now={now} timezone={tz} />,
     );
-    const junBtn = container.querySelector(
-      'button[data-month-key="2026-06"]',
-    );
-    expect(junBtn).toBeTruthy();
-    expect(junBtn!.textContent).not.toMatch(/\+/);
-    expect(junBtn!.getAttribute('data-month-count')).toBe('3');
-  });
+    const junBtn3 = c3.querySelector('button[data-month-key="2026-06"]');
+    expect(junBtn3).toBeTruthy();
+    expect(junBtn3!.getAttribute('data-month-count')).toBe('3');
+    // 3-dot render removed — no matching spans on the button.
+    expect(
+      junBtn3!.querySelectorAll('span.size-1\\.5.rounded-full.bg-primary')
+        .length,
+    ).toBe(0);
+    // No +N overflow label (D-01 replaces dots with tint).
+    expect(junBtn3!.textContent).not.toMatch(/\+/);
 
-  it('renders +N overflow when a month has more than 3 tasks', () => {
-    const tasks = [
+    const tasks5 = [
       mkTask('a', 'A', new Date('2026-06-05T00:00:00Z')),
       mkTask('b', 'B', new Date('2026-06-10T00:00:00Z')),
       mkTask('c', 'C', new Date('2026-06-15T00:00:00Z')),
       mkTask('d', 'D', new Date('2026-06-20T00:00:00Z')),
       mkTask('e', 'E', new Date('2026-06-25T00:00:00Z')),
     ];
-    const { container } = render(
-      <HorizonStrip tasks={tasks} now={now} timezone={tz} />,
+    const { container: c5 } = render(
+      <HorizonStrip tasks={tasks5} now={now} timezone={tz} />,
     );
-    const junBtn = container.querySelector(
-      'button[data-month-key="2026-06"]',
-    );
-    expect(junBtn).toBeTruthy();
-    expect(junBtn!.textContent).toMatch(/\+2/);
+    const junBtn5 = c5.querySelector('button[data-month-key="2026-06"]');
+    expect(junBtn5).toBeTruthy();
+    expect(junBtn5!.getAttribute('data-month-count')).toBe('5');
+    // Still no +N overflow — the density tint carries the signal.
+    expect(junBtn5!.textContent).not.toMatch(/\+/);
   });
 });

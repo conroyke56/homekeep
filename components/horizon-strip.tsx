@@ -16,16 +16,28 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import type { ClassifiedTask } from '@/lib/band-classification';
+import { ShiftBadge } from '@/components/shift-badge';
 
 /**
  * HorizonStrip (03-02 Plan, D-14, VIEW-04, Pitfall 2).
  *
  * A 12-month CSS grid starting from the current month in the home's
  * IANA timezone. Each cell is a tappable `<button>` showing the
- * month abbreviation and 0..3 warm-accent dots (plus `+N` overflow
- * when a month has more than 3 tasks). Tapping a populated cell
- * opens a bottom `<Sheet>` drawer listing the tasks falling in that
- * month with their exact due dates.
+ * month abbreviation. Tapping a populated cell opens a bottom
+ * `<Sheet>` drawer listing the tasks falling in that month with
+ * their exact due dates.
+ *
+ * Phase 16 Plan 01 (D-01, D-03 / LVIZ-01): each cell's background is
+ * tinted bg-primary/{10,30,50} proportional to that month's task
+ * count relative to the heaviest-month max. Empty months receive no
+ * tint (D-03 fallback to default cell background). This REPLACES the
+ * old 3-dot per-cell render with an at-a-glance density signal.
+ *
+ * Phase 16 Plan 01 (D-06 / LVIZ-03): when the Sheet drawer is open,
+ * each task row wears the ⚖️ ShiftBadge if the parent supplied a
+ * `shiftByTaskId` Map entry with `displaced=true`. Parent
+ * (BandView/PersonTaskList) owns the compute — the Map comes in
+ * already keyed so this component stays render-only.
  *
  * Timezone safety: bucketing uses
  * `formatInTimeZone(date, timezone, 'yyyy-MM')` so a task whose
@@ -46,10 +58,23 @@ export function HorizonStrip({
   tasks,
   now,
   timezone,
+  shiftByTaskId,
 }: {
   tasks: ClassifiedTask[];
   now: Date;
   timezone: string;
+  /**
+   * Phase 16 Plan 01 (D-06 / LVIZ-03): optional per-task shift info
+   * keyed by task id. When a task's entry has `displaced: true`, the
+   * Sheet drawer renders `<ShiftBadge>` next to the task name.
+   * Parent (BandView / PersonTaskList) computes this Map once per
+   * render via `getIdealAndScheduled` and passes it down. Defaults
+   * to empty → backward-compat with Phase 3 call sites.
+   */
+  shiftByTaskId?: Map<
+    string,
+    { idealDate: Date; scheduledDate: Date; displaced: boolean }
+  >;
 }) {
   const [openMonthKey, setOpenMonthKey] = useState<string | null>(null);
 
@@ -70,6 +95,16 @@ export function HorizonStrip({
     arr.push(t);
     buckets.set(k, arr);
   }
+
+  // Phase 16 Plan 01 (D-01 / LVIZ-01): max-count normaliser for the
+  // density tint. Math.max-with-1 floor prevents a divide-by-zero
+  // edge case (though the emptyHorizon short-circuit below already
+  // catches tasks.length === 0).
+  let maxCount = 0;
+  for (const arr of buckets.values()) {
+    if (arr.length > maxCount) maxCount = arr.length;
+  }
+  if (maxCount < 1) maxCount = 1;
 
   const openTasks = openMonthKey ? (buckets.get(openMonthKey) ?? []) : [];
   const openMonthLabel = openMonthKey
@@ -105,6 +140,19 @@ export function HorizonStrip({
               // with the populated cells. Phase 9 UX audit bumped from
               // 55% (too ghosted) to 65%.
               const labelOpacity = count > 0 ? 'opacity-100' : 'opacity-65';
+              // Phase 16 Plan 01 (D-01 / LVIZ-01): three-step density
+              // tint. Thresholds: empty → none; ratio ≤ 0.33 → /10;
+              // 0.33 < ratio ≤ 0.66 → /30; ratio > 0.66 → /50.
+              // D-03: empty months render with no tint (default bg).
+              const ratio = count === 0 ? 0 : count / maxCount;
+              const tintClass =
+                count === 0
+                  ? ''
+                  : ratio <= 0.33
+                    ? 'bg-primary/10'
+                    : ratio <= 0.66
+                      ? 'bg-primary/30'
+                      : 'bg-primary/50';
               return (
                 <button
                   key={m.key}
@@ -113,30 +161,19 @@ export function HorizonStrip({
                   onClick={() => count > 0 && setOpenMonthKey(m.key)}
                   className={
                     'flex min-h-[44px] flex-col items-center justify-center gap-1 rounded border p-1 text-xs disabled:opacity-50 ' +
+                    (tintClass ? tintClass + ' ' : '') +
                     (isCurrent ? 'border-primary/40' : '')
                   }
                   aria-label={`${m.label} — ${count} task${count === 1 ? '' : 's'}`}
                   data-month-key={m.key}
                   data-month-count={count}
+                  data-tint={tintClass || 'none'}
                   data-current-month={isCurrent ? 'true' : undefined}
                 >
                   <span
                     className={`font-display text-muted-foreground ${labelOpacity}`}
                   >
                     {m.label}
-                  </span>
-                  <span className="flex items-center gap-0.5">
-                    {Array.from({ length: Math.min(count, 3) }).map(
-                      (_, i) => (
-                        <span
-                          key={i}
-                          className="size-1.5 rounded-full bg-primary"
-                        />
-                      ),
-                    )}
-                    {count > 3 && (
-                      <span className="text-[10px]">+{count - 3}</span>
-                    )}
                   </span>
                 </button>
               );
@@ -157,17 +194,34 @@ export function HorizonStrip({
             <SheetTitle>{openMonthLabel}</SheetTitle>
           </SheetHeader>
           <ul className="space-y-2 p-4">
-            {openTasks.map((t) => (
-              <li key={t.id} data-horizon-task-id={t.id}>
-                <span className="font-medium">
-                  {(t as ClassifiedTask & { name: string }).name}
-                </span>
-                <span className="text-muted-foreground">
-                  {' — '}
-                  {formatInTimeZone(t.nextDue, timezone, 'MMM d')}
-                </span>
-              </li>
-            ))}
+            {openTasks.map((t) => {
+              // Phase 16 Plan 01 (D-06 / LVIZ-03): render ShiftBadge
+              // inline when the parent supplied a displaced entry for
+              // this task. Hidden on dormant/anchored per upstream
+              // contract — the parent already filters those via
+              // getIdealAndScheduled returning displaced=false.
+              const shift = shiftByTaskId?.get(t.id);
+              const showBadge =
+                shift && shift.displaced && shift.idealDate && shift.scheduledDate;
+              return (
+                <li key={t.id} data-horizon-task-id={t.id}>
+                  <span className="font-medium">
+                    {(t as ClassifiedTask & { name: string }).name}
+                  </span>
+                  {showBadge && (
+                    <ShiftBadge
+                      idealDate={shift!.idealDate}
+                      scheduledDate={shift!.scheduledDate}
+                      timezone={timezone}
+                    />
+                  )}
+                  <span className="text-muted-foreground">
+                    {' — '}
+                    {formatInTimeZone(t.nextDue, timezone, 'MMM d')}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </SheetContent>
       </Sheet>
