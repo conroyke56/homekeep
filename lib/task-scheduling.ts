@@ -46,11 +46,35 @@ export type Task = {
   preferred_days?: 'any' | 'weekend' | 'weekday' | null; // D-07 PREF
   active_from_month?: number | null; // D-11 SEAS
   active_to_month?: number | null; // D-11 SEAS
+  // Phase 12 (D-01, LOAD-01): nullable smoothed date. Populated by
+  // placeNextDue via completeTaskAction's batch (Plan 12-03). v1.0
+  // rows + fresh post-migration rows have null → read-time falls
+  // through to natural via D-02.
+  next_due_smoothed?: string | null;
 };
 
 export type Completion = {
   completed_at: string; // ISO 8601 UTC — Phase 3+; in Phase 2 this is always null.
 };
+
+/**
+ * Phase 12 (LOAD-09, Phase 11 Rule-1 fix centralization):
+ * OOFT marker helper. Treats both `null` (app-layer semantic) and
+ * `0` (PB 0.37.1 storage-reality for a cleared NumberField) as OOFT.
+ *
+ * Exported to centralize the 3 existing callsites' shared predicate:
+ *   1. computeNextDue isOoft (this file, previously inlined line 155)
+ *   2. completeTaskAction freqOoft (lib/actions/completions.ts Plan 11-02)
+ *   3. placeNextDue + computeHouseholdLoad guards (Phase 12 new)
+ * Phase 13's createTaskAction will be the 4th callsite.
+ *
+ * Pure — no side effects. Per 11-03 SUMMARY §Handoff for Phase 12.
+ */
+export function isOoftTask(
+  task: Pick<Task, 'frequency_days'>,
+): boolean {
+  return task.frequency_days === null || task.frequency_days === 0;
+}
 
 /**
  * Compute the next-due date for a task.
@@ -152,7 +176,7 @@ export function computeNextDue(
   // Plan 11-03 integration (Scenario 2) where an OOFT task created with
   // `frequency_days: null` round-tripped as `0` and tripped the guard
   // when computeCoverage iterated sibling tasks during completion.
-  const isOoft = task.frequency_days === null || task.frequency_days === 0;
+  const isOoft = isOoftTask(task);
   if (!isOoft) {
     if (
       !Number.isInteger(task.frequency_days) ||

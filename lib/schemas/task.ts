@@ -76,6 +76,11 @@ export const taskSchema = z
     // Phase 11 (D-11): paired seasonal window. Both set or both null.
     active_from_month: z.number().int().min(1).max(12).nullable().optional(),
     active_to_month: z.number().int().min(1).max(12).nullable().optional(),
+    // Phase 12 (D-01, LOAD-01): smoothed date written by placeNextDue
+    // on completion (Plan 12-03) or on task creation (Phase 13 TCSEM).
+    // Null for v1.0 holdover rows; read-time falls through to natural
+    // cadence per D-02.
+    next_due_smoothed: z.string().nullable().optional(),
   })
   .refine(
     (d) =>
