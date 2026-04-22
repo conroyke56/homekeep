@@ -16,6 +16,7 @@ import {
 } from '@/lib/band-classification';
 import { completeTaskAction } from '@/lib/actions/completions';
 import { updateTask } from '@/lib/actions/tasks';
+import { getIdealAndScheduled } from '@/lib/horizon-density';
 import { TaskBand } from '@/components/task-band';
 import { HorizonStrip } from '@/components/horizon-strip';
 import { DormantTaskRow } from '@/components/dormant-task-row';
@@ -110,6 +111,24 @@ export function PersonTaskList({
     nowDate,
     timezone,
   );
+
+  // Phase 16 Plan 01 (LVIZ-03, LVIZ-04, D-04, D-06): per-render shift
+  // map mirrors BandView. Threaded to TaskBand (×2) + HorizonStrip.
+  const shiftByTaskId = new Map<
+    string,
+    { idealDate: Date; scheduledDate: Date; displaced: boolean }
+  >();
+  for (const t of tasks) {
+    const last = latestByTask.get(t.id) ?? null;
+    const info = getIdealAndScheduled(t, last, nowDate, timezone);
+    if (info.ideal && info.scheduled) {
+      shiftByTaskId.set(t.id, {
+        idealDate: info.ideal,
+        scheduledDate: info.scheduled,
+        displaced: info.displaced,
+      });
+    }
+  }
 
   async function handleTap(
     taskId: string,
@@ -228,6 +247,7 @@ export function PersonTaskList({
             timezone={timezone}
             variant="overdue"
             now={nowDate}
+            shiftByTaskId={shiftByTaskId}
           />
           <TaskBand
             label="This Week"
@@ -238,11 +258,13 @@ export function PersonTaskList({
             timezone={timezone}
             variant="thisWeek"
             now={nowDate}
+            shiftByTaskId={shiftByTaskId}
           />
           <HorizonStrip
             tasks={horizonWithName}
             now={nowDate}
             timezone={timezone}
+            shiftByTaskId={shiftByTaskId}
           />
           {/* Phase 14 (SEAS-06): Sleeping section — mirrors BandView's
               placement below HorizonStrip. Zero-added-DOM when no

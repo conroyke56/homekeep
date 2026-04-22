@@ -18,6 +18,7 @@ import {
 import { computeCoverage } from '@/lib/coverage';
 import { completeTaskAction } from '@/lib/actions/completions';
 import { updateTask } from '@/lib/actions/tasks';
+import { getIdealAndScheduled } from '@/lib/horizon-density';
 import { CoverageRing } from '@/components/coverage-ring';
 import { TaskBand } from '@/components/task-band';
 import { HorizonStrip } from '@/components/horizon-strip';
@@ -113,6 +114,12 @@ export type TaskWithName = Task & {
   /** 04-03 TASK-03 + TASK-04: pre-resolved cascade result from the
    * Server Component. Threaded down to TaskRow + TaskDetailSheet. */
   effective?: EffectiveAssignee;
+  // Phase 16 Plan 01 (LVIZ-03, LVIZ-05): extras surfaced from the
+  // widened fields projection. Task already has these as optional
+  // (number | null / string | null), but redeclaring here keeps the
+  // detail-sheet prop cast clean without `as any` at the call site.
+  // next_due_smoothed/preferred_days/due_date/reschedule_marker all
+  // inherited from Task directly — no duplicate declaration needed.
 };
 
 export function BandView({
@@ -201,6 +208,26 @@ export function BandView({
   );
   const coverage = computeCoverage(tasks, latestByTask, overridesMap, nowDate);
   const coveragePct = Math.round(coverage * 100);
+
+  // Phase 16 Plan 01 (LVIZ-03, LVIZ-04, D-04, D-06): build the shift map
+  // per render. Pure — O(N) in tasks, reuses latestByTask. Consumed by
+  // both TaskBand (row badge) and HorizonStrip (drawer badge) + seeds
+  // the TaskDetailSheet Schedule section via the lastCompletion prop.
+  const shiftByTaskId = new Map<
+    string,
+    { idealDate: Date; scheduledDate: Date; displaced: boolean }
+  >();
+  for (const t of tasks) {
+    const last = latestByTask.get(t.id) ?? null;
+    const info = getIdealAndScheduled(t, last, nowDate, timezone);
+    if (info.ideal && info.scheduled) {
+      shiftByTaskId.set(t.id, {
+        idealDate: info.ideal,
+        scheduledDate: info.scheduled,
+        displaced: info.displaced,
+      });
+    }
+  }
 
   async function handleTap(
     taskId: string,
@@ -396,6 +423,7 @@ export function BandView({
             timezone={timezone}
             variant="overdue"
             now={nowDate}
+            shiftByTaskId={shiftByTaskId}
           />
           {/* 06-03 GAME-05: MostNeglectedCard between Overdue and This
               Week bands. Self-null when no overdue tasks. `pending` is
@@ -417,11 +445,13 @@ export function BandView({
             timezone={timezone}
             variant="thisWeek"
             now={nowDate}
+            shiftByTaskId={shiftByTaskId}
           />
           <HorizonStrip
             tasks={horizonWithName}
             now={nowDate}
             timezone={timezone}
+            shiftByTaskId={shiftByTaskId}
           />
           {/* Phase 14 (SEAS-06): Sleeping section — rendered only when at
               least one dormant task exists. Dormant rows carry their
@@ -483,13 +513,22 @@ export function BandView({
             ? {
                 id: detailTask.id,
                 name: detailTask.name,
-                // Phase 11: frequency_days widened to `number | null` at
-                // the Task type (OOFT support). Detail-sheet projection
-                // is v1.0/v1.1-recurring only — cast narrows for the UI.
-                // Plan 11-02 / Phase 15 will add OOFT-shape handling.
-                frequency_days: detailTask.frequency_days as number,
+                // Phase 16 Plan 01 (LVIZ-05): frequency_days widened to
+                // number | null end-to-end; TaskDetailSheet reads it
+                // for the SheetDescription "One-off" copy path on OOFT
+                // tasks. created + the seasonal/preferred/due fields
+                // feed the getIdealAndScheduled call in the Schedule
+                // section gate.
+                frequency_days: detailTask.frequency_days,
                 schedule_mode: detailTask.schedule_mode,
                 anchor_date: detailTask.anchor_date,
+                created: detailTask.created,
+                active_from_month: detailTask.active_from_month ?? null,
+                active_to_month: detailTask.active_to_month ?? null,
+                preferred_days: detailTask.preferred_days ?? null,
+                next_due_smoothed: detailTask.next_due_smoothed ?? null,
+                due_date: detailTask.due_date ?? null,
+                reschedule_marker: detailTask.reschedule_marker ?? null,
                 notes: detailTask.notes ?? '',
                 area_name: detailTask.area_name,
                 effective: detailTask.effective,
@@ -501,6 +540,11 @@ export function BandView({
         homeId={homeId}
         onComplete={(id) => handleTap(id)}
         onReschedule={(id) => setRescheduleTaskId(id)}
+        lastCompletion={
+          detailCompletions[0]
+            ? { completed_at: detailCompletions[0].completed_at }
+            : null
+        }
       />
 
       {/* Phase 15 Plan 02 (SNZE-01, D-05): RescheduleActionSheet opened

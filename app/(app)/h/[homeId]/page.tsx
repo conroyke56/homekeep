@@ -102,8 +102,13 @@ export default async function HomeDashboardPage({
   const tasks = await pb.collection('tasks').getFullList({
     filter: `home_id = "${homeId}" && archived = false`,
     expand: 'area_id',
+    // Phase 16 Plan 01 (LVIZ-03, LVIZ-05): widen projection to include
+    // next_due_smoothed + preferred_days + due_date + reschedule_marker
+    // so BandView can compute shift info + TaskDetailSheet can render
+    // its Schedule section. active_from_month / active_to_month already
+    // threaded via Phase 14.
     fields:
-      'id,name,frequency_days,schedule_mode,anchor_date,archived,created,icon,color,area_id,notes,assigned_to_id,active_from_month,active_to_month,expand.area_id.name',
+      'id,name,frequency_days,schedule_mode,anchor_date,archived,created,icon,color,area_id,notes,assigned_to_id,active_from_month,active_to_month,next_due_smoothed,preferred_days,due_date,reschedule_marker,expand.area_id.name',
   });
 
   const now = new Date();
@@ -159,6 +164,15 @@ export default async function HomeDashboardPage({
       assigned_to_id: assignedToId,
       active_from_month: (t.active_from_month as number) ?? null,
       active_to_month: (t.active_to_month as number) ?? null,
+      // Phase 16 Plan 01 (LVIZ-03, LVIZ-05): defensive `?? null` on each
+      // new optional field — PB 0.37.1 returns '' for empty DateField /
+      // empty NumberField-as-string, so a blanket null coercion keeps
+      // the downstream `getIdealAndScheduled` path well-typed.
+      next_due_smoothed: (t.next_due_smoothed as string | null) || null,
+      preferred_days:
+        (t.preferred_days as 'any' | 'weekend' | 'weekday' | null) || null,
+      due_date: (t.due_date as string | null) || null,
+      reschedule_marker: (t.reschedule_marker as string | null) || null,
       effective,
     };
   });

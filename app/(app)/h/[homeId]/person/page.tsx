@@ -113,11 +113,15 @@ export default async function PersonPage({
   // Tasks (active only). Phase 14 (SEAS-06): active_from_month +
   // active_to_month added to the projection so PersonTaskList's
   // classifyDormantTasks can identify dormant tasks and render the
-  // Sleeping section below HorizonStrip.
+  // Sleeping section below HorizonStrip. Phase 16 Plan 01 (LVIZ-03,
+  // LVIZ-05): widen with next_due_smoothed + preferred_days +
+  // due_date + reschedule_marker so PersonTaskList can compute the
+  // shift map (⚖️ badges) + TaskDetailSheet (not used on Person view,
+  // but field parity keeps the PersonTask type aligned with TaskWithName).
   const tasksRaw = await pb.collection('tasks').getFullList({
     filter: `home_id = "${homeId}" && archived = false`,
     fields:
-      'id,name,area_id,created,frequency_days,schedule_mode,anchor_date,archived,assigned_to_id,active_from_month,active_to_month',
+      'id,name,area_id,created,frequency_days,schedule_mode,anchor_date,archived,assigned_to_id,active_from_month,active_to_month,next_due_smoothed,preferred_days,due_date,reschedule_marker',
   });
 
   // Filter to tasks whose effective assignee is the current user. Note:
@@ -156,6 +160,14 @@ export default async function PersonPage({
       // classify dormants.
       active_from_month: (t.active_from_month as number | null) ?? null,
       active_to_month: (t.active_to_month as number | null) ?? null,
+      // Phase 16 Plan 01 (LVIZ-03): threaded to PersonTaskList so the
+      // shift-map compute can run per render. '' → null coercion
+      // handles PB 0.37.1's empty-DateField read-back.
+      next_due_smoothed: (t.next_due_smoothed as string | null) || null,
+      preferred_days:
+        (t.preferred_days as 'any' | 'weekend' | 'weekday' | null) || null,
+      due_date: (t.due_date as string | null) || null,
+      reschedule_marker: (t.reschedule_marker as string | null) || null,
       area_id: areaId,
       effective,
     });
