@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Scheduling & Flexibility
 status: executing
-stopped_at: Completed 15-01-P01-PLAN.md
-last_updated: "2026-04-22T14:22:20.725Z"
+stopped_at: Completed 15-02-P01-PLAN.md
+last_updated: "2026-04-22T14:50:36.525Z"
 last_activity: 2026-04-22
 progress:
   total_phases: 19
   completed_phases: 12
   total_plans: 43
-  completed_plans: 44
+  completed_plans: 45
   percent: 100
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 15 (One-Off & Reschedule UI) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-22
 
@@ -110,6 +110,7 @@ Progress: [██████████] 100%
 | Phase 14 P1 | 12min | 2 tasks | 10 files |
 | Phase 14 P02 | ~12min | 2 tasks | 9 files |
 | Phase 15 P01 | 18min | 2 tasks | 5 files |
+| Phase 15 P02 | 25min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -309,6 +310,8 @@ Recent decisions affecting current work:
 - DormantTaskRow accepts NO onComplete prop (stricter than plan alternative) — T-14-06 mitigation by construction
 - By Area gets HOME-LEVEL dormant rollup (not per-area); per-area dormant detail deferred to Phase 15+ Reschedule scope
 - Phase 15 Wave 1: snoozeTaskAction reuses Phase 10 D-02 atomic-replace-active via pb.createBatch; rescheduleTaskAction ternary writes exactly one of {anchor_date, next_due_smoothed} + reschedule_marker (T-15-01-04 mitigation)
+- Phase 15 Plan 02: unmount-on-close for RescheduleActionSheet avoids sync-setState-in-effect lint error
+- Phase 15 Plan 02: by-area page Reschedule wiring deferred - TaskList is Server Component and promoting to Client is out-of-scope architectural change
 
 ### Pending Todos
 
@@ -334,8 +337,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-22T14:22:20.705Z
-Stopped at: Completed 15-01-P01-PLAN.md
+Last session: 2026-04-22T14:50:36.506Z
+Stopped at: Completed 15-02-P01-PLAN.md
 Resume file: None
 
 **Planned Phase:** 15 () — 0 plans — 2026-04-22T14:12:51.235Z

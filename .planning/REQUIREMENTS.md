@@ -203,7 +203,8 @@
 ** (draft): One-off task automatically archives after first completion (atomic with completion write)
 - [x] **OOFT-03
 ** (draft): One-off tasks have an explicit due date at creation (per rider 2 lean — confirm in Phase 11 discuss)
-- [ ] **OOFT-04**: Task form distinguishes "Recurring" (with frequency) vs "One-off" (no frequency); anchored mode disallowed for one-off
+- [x] **OOFT-04
+**: Task form distinguishes "Recurring" (with frequency) vs "One-off" (no frequency); anchored mode disallowed for one-off
 - [x] **OOFT-05
 **: One-off tasks contribute 1 to the LOAD density map on their due date but are themselves non-smoothable
 
@@ -245,9 +246,12 @@
 
 ### Snooze & Permanent Reschedule (SNZE)
 
-- [ ] **SNZE-01**: User can open a "Reschedule" action sheet from any task in any view
-- [ ] **SNZE-02**: Action sheet includes a date picker defaulting to the natural next due
-- [ ] **SNZE-03**: Action sheet has a "Just this time" / "From now on" radio (default: Just this time)
+- [x] **SNZE-01
+**: User can open a "Reschedule" action sheet from any task in any view
+- [x] **SNZE-02
+**: Action sheet includes a date picker defaulting to the natural next due
+- [x] **SNZE-03
+**: Action sheet has a "Just this time" / "From now on" radio (default: Just this time)
 - [ ] **SNZE-04**: New `schedule_overrides` PB collection stores one-off snoozes `(id, task_id, snooze_until, consumed_at, created)`
 - [x] **SNZE-05
 **: computeNextDue consults the latest active (unconsumed) override BEFORE the smoothed-date branch (snooze trumps LOAD)
@@ -255,7 +259,8 @@
 **: Overrides are consumed when the next completion lands after the override date
 - [x] **SNZE-07
 **: "From now on" mutates `tasks.anchor_date` (anchored mode) or `tasks.next_due_smoothed` with a marker flag (cycle mode) directly — no override row written. Marker flag detectable by REBAL preservation rules.
-- [ ] **SNZE-08**: Snoozing into a dormant season prompts an "Extend the active window?" confirmation dialog
+- [x] **SNZE-08
+**: Snoozing into a dormant season prompts an "Extend the active window?" confirmation dialog
 - [x] **SNZE-09
 **: Coverage ring uses the snoozed (later) next_due (snoozed tasks don't drag coverage down)
 - [x] **SNZE-10
