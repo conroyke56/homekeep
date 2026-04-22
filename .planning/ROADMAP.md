@@ -240,12 +240,14 @@ Plans:
   5. The coverage ring excludes dormant tasks from its mean (identical treatment to archived tasks)
   6. One-off tasks contribute `1` to the household load density on their due date but their own `next_due_smoothed` is never re-smoothed by LOAD (contract surfaced for Phase 12)
   7. All 311 unit + 23 E2E tests still pass; a new unit suite of roughly 25-30 cases covers the one-off / preferred-days / seasonal / cross-year-wrap matrix
-**Plans**: TBD (estimate 3-4)
+**Plans**: 3 plans
 
 > **Pre-planning gate (rider 2):** Before any Phase 11 plans are written, `/gsd-discuss-phase 11` must debate the three candidate shapes for one-off task first-due semantics — (a) explicit "do by" date required, (b) default `creation + 7 days` editable, (c) separate "To-do" list with promote-to-scheduled. User leans (a). Whichever shape locks into Phase 11 CONTEXT.md becomes the data model for OOFT-01..03.
 
 Plans:
-- [ ] 11-01: TBD
+- [ ] 11-01-P01-PLAN.md — Migration + zod schema + helper scaffolding (4 new nullable fields, frequency_days nullable, effectivePreferredDays/narrowToPreferredDays/isInActiveWindow/nextWindowOpenDate helpers, ~18 unit tests)
+- [ ] 11-02-P01-PLAN.md — computeNextDue seasonal-dormant/wakeup/OOFT branches (D-16 order), computeCoverage dormant filter, completeTaskAction OOFT auto-archive batch op, ~18 new unit tests
+- [ ] 11-03-P01-PLAN.md — Integration suite on port 18099: 4 scenarios (migration shape, OOFT lifecycle atomic archive, seasonal dormant/wakeup, D-17 override × dormant)
 
 ### Phase 12: Load-Smoothing Engine
 **Goal**: Deliver the SPEC thesis — *"spread the year's work evenly across weeks"* — by making `computeNextDue` consult a stored `tasks.next_due_smoothed` that is chosen by a forward-only placement algorithm over a per-day household load map. All 6 branches (override, smoothed, anchored, seasonal, one-off, natural) short-circuit in a documented order; anchored tasks bypass smoothing entirely
