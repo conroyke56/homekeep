@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Scheduling & Flexibility
-status: executing
-stopped_at: Completed 13-01-P01-PLAN.md
-last_updated: "2026-04-22T12:24:59.696Z"
+status: verifying
+stopped_at: Completed 13-02-P01-PLAN.md
+last_updated: "2026-04-22T12:40:14.878Z"
 last_activity: 2026-04-22
 progress:
   total_phases: 19
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 38
-  completed_plans: 40
+  completed_plans: 41
   percent: 100
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 Phase: 13 (Task Creation Semantics) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-22
 
 Progress: [██████████] 100%
@@ -106,6 +106,7 @@ Progress: [██████████] 100%
 | Phase 12 P03 | 5min | 2 tasks | 2 files |
 | Phase 12 P04 | 10min | 3 tasks | 2 files |
 | Phase 13 P01 | 10min | 3 tasks | 7 files |
+| Phase 13 P02 | ~8min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -296,6 +297,10 @@ Recent decisions affecting current work:
 - Phase 13 Plan 01: single-op create instead of pb.createBatch() for createTask — D-05 Approach A
 - Phase 13 Plan 01: TCSEM bridge via synthetic lastCompletion.completed_at = firstIdeal - freq reverses placeNextDue's internal naturalIdeal math
 - Phase 13 Plan 01: SDST audit codified as runtime test (grep via child_process) scoped to production code dirs — token-concat obfuscation keeps test file clean of literal matches
+- Phase 13 Plan 02: radix-ui meta package re-export for Collapsible (no direct @radix-ui/react-collapsible install) — preserves 02-02 exact-pin invariant; matches dialog.tsx convention
+- Phase 13 Plan 02: TCSEM bridge preserved when threading last_done — computeFirstIdealDate runs first, then synthetic lastCompletion offset dance for placeNextDue (NEVER short-circuit by passing lastDone as placeNextDue's lastCompletion arg; would collapse TCSEM-03 smart-default branch)
+- Phase 13 Plan 02: Scenario 1 uses relative last_done (now-12d) + widened [now+10,now+26] assertion window — avoids time-travel test-flake and Rider-1 tolerance drift while preserving TCSEM-02 vs TCSEM-03 branch distinguishability
+- Phase 13 Plan 02: Port 18101 claimed for tcsem-integration.test.ts (allocation register now 18090..18101; 18102+ reserved for Phase 14+)
 
 ### Pending Todos
 
@@ -321,8 +326,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-22T12:24:59.678Z
-Stopped at: Completed 13-01-P01-PLAN.md
+Last session: 2026-04-22T12:40:14.858Z
+Stopped at: Completed 13-02-P01-PLAN.md
 Resume file: None
 
 **Planned Phase:** 13 () — 0 plans — 2026-04-22T12:08:50.461Z

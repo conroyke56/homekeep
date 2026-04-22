@@ -33,7 +33,7 @@ v1.1 extends v1.0 with household-global load-aware scheduling (the SPEC thesis-d
 - [ ] **Phase 10: Schedule Override Foundation** - `schedule_overrides` PB collection + `computeNextDue` override branch threaded through every caller (coverage, scheduler, horizon, band classification)
 - [x] **Phase 11: Task Model Extensions** - Nullable `frequency_days`, `preferred_days`, `active_from_month`/`active_to_month` fields + scheduler logic for OOFT / PREF / SEAS behaviors. OOFT-01..03 finalized here after `/gsd-discuss-phase 11` locks first-due semantics (rider 2)
 - [x] **Phase 12: Load-Smoothing Engine** - `tasks.next_due_smoothed` field, `placeNextDue` + `computeHouseholdLoad` helpers, integration into `computeNextDue`; PREF/SEAS/SNZE/OOFT/anchored interactions. **Hard gate: branch-composition test matrix covers all 6 branches and meaningful interactions.**
-- [ ] **Phase 13: Task Creation Semantics** - Task form "Last done" optional field (Advanced collapsible) + smart-default first-due + `batchCreateSeedTasks` rewrite calling TCSEM per seed with in-memory load map; SDST removal cleanup
+- [x] **Phase 13: Task Creation Semantics** - Task form "Last done" optional field (Advanced collapsible) + smart-default first-due + `batchCreateSeedTasks` rewrite calling TCSEM per seed with in-memory load map; SDST removal cleanup
 - [ ] **Phase 14: Seasonal UI & Seed Library** - Task form "Active months" section, dimmed + "Sleeps until" rendering in By Area / Person / dashboard, anchored-mode warning, seasonal seed pairs
 - [ ] **Phase 15: One-Off & Reschedule UI** - Task form one-off toggle, Reschedule action sheet with date picker and "Just this time" / "From now on" radio; ExtendWindowDialog for cross-window snoozes
 - [ ] **Phase 16: Horizon Density Visualization** - HorizonStrip density indicators, ⚖️ badge on shifted tasks across BandView/By Area/Person, TaskDetailSheet ideal-vs-scheduled surface
@@ -287,7 +287,7 @@ Plans:
 
 Plans:
 - [x] 13-01-P01-PLAN.md — Wave 1: computeFirstIdealDate helper (TCSEM-02/TCSEM-03 formulas) + createTask TCSEM placement (mirrors completeTaskAction step 7.5) + batchCreateSeedTasks in-memory load-map threading + SDST audit/removal (code-level ZERO matches)
-- [ ] 13-02-P01-PLAN.md — Wave 2: shadcn Collapsible primitive + task-form Advanced collapsible with Last done date field (cycle-mode only) + 3-scenario disposable-PB integration suite on port 18101 (custom create atomicity / 5-seed cohort distribution / SDST runtime absence)
+- [x] 13-02-P01-PLAN.md — Wave 2: shadcn Collapsible primitive + task-form Advanced collapsible with Last done date field (cycle-mode only) + 3-scenario disposable-PB integration suite on port 18101 (custom create atomicity / 5-seed cohort distribution / SDST runtime absence)
 
 ### Phase 14: Seasonal UI & Seed Library
 **Goal**: Seasonal tasks are first-class in the UI — authors can set active months on the task form, dormant tasks render as distinct "sleeping" rows across By Area / Person / dashboard views, and the onboarding seed library ships two seasonal task pairs so a new household tastes the feature without custom work

@@ -298,7 +298,8 @@
 
 ### Task Creation Semantics (TCSEM)
 
-- [ ] **TCSEM-01**: Task form gains optional "Last done" date field in an Advanced collapsible (default collapsed)
+- [x] **TCSEM-01
+**: Task form gains optional "Last done" date field in an Advanced collapsible (default collapsed)
 - [x] **TCSEM-02**: When "Last done" provided in cycle mode: `first_ideal = last_done + frequency_days`, then load-smoothed
 - [x] **TCSEM-03**: When "Last done" blank: smart-default first-due based on cycle length (≤7d → tomorrow; 8-90d → cycle/4; >90d → cycle/3), then load-smoothed
 - [x] **TCSEM-04**: New tasks ALWAYS have `next_due_smoothed` populated by TCSEM at creation time
@@ -501,7 +502,7 @@ These were noted as v1.1 in earlier planning but did NOT make it into the locked
 | LOAD-13 | Phase 12 | Pending |
 | LOAD-14 | Phase 12 | Pending |
 | LOAD-15 | Phase 12 | Pending (hard gate) |
-| TCSEM-01 | Phase 13 | Pending |
+| TCSEM-01 | Phase 13 | Complete (13-02) |
 | TCSEM-02 | Phase 13 | Complete (13-01) |
 | TCSEM-03 | Phase 13 | Complete (13-01) |
 | TCSEM-04 | Phase 13 | Complete (13-01) |
