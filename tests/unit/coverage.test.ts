@@ -260,3 +260,79 @@ describe('computeCoverage with override (SNZE-09)', () => {
     ).toBeCloseTo(1.0, 10);
   });
 });
+
+// ─── Phase 11, D-14 + SEAS-05: dormant filter ───────────────────────────
+//
+// Seasonal tasks whose active window does not include the current UTC
+// month are excluded from the coverage mean — treated identically to
+// archived tasks. "Lawn mowing is perfectly fine in winter."
+// Year-round tasks (no active_from_month / active_to_month) are NOT
+// affected — v1.0 row shape preserved.
+
+describe('computeCoverage — dormant filter (D-14, SEAS-05)', () => {
+  test('dormant seasonal task excluded from mean → coverage 1.0 (empty-home invariant)', () => {
+    const now = new Date('2026-07-15T12:00:00.000Z'); // July — out of Oct-Mar
+    const dormant = makeTask({
+      id: 't-dormant',
+      frequency_days: 30,
+      active_from_month: 10, // Oct
+      active_to_month: 3, // Mar (wrap)
+    });
+    // Only task is dormant → active list empty → 1.0 via empty-home invariant.
+    expect(computeCoverage([dormant], new Map(), new Map(), now)).toBe(1.0);
+  });
+
+  test('year-round task (no window) NOT excluded — v1.0 shape preserved', () => {
+    const now = new Date('2026-07-15T12:00:00.000Z');
+    const yearRound = makeTask({
+      id: 't-year',
+      frequency_days: 7,
+      // no active_from_month / active_to_month — v1.0 shape
+    });
+    const latest = new Map<string, CompletionRecord>();
+    latest.set('t-year', makeCompletion('t-year', now.toISOString()));
+    // On-schedule → health 1.0 → coverage 1.0
+    expect(
+      computeCoverage([yearRound], latest, new Map(), now),
+    ).toBeCloseTo(1.0, 10);
+  });
+
+  test('mix: 1 dormant + 1 active-overdue → coverage reflects active-only mean (= 0)', () => {
+    const now = new Date('2026-07-15T12:00:00.000Z');
+    const dormant = makeTask({
+      id: 't-dormant',
+      frequency_days: 30,
+      active_from_month: 10,
+      active_to_month: 3,
+    });
+    const overdueYearRound = makeTask({
+      id: 't-overdue',
+      frequency_days: 7,
+      // never completed, created 44d ago (2026-06-01) → nextDue = 2026-06-08
+      // → 37d overdue → ratio 37/7 ≈ 5.3 → clamp 0
+      created: '2026-06-01T00:00:00.000Z',
+    });
+    expect(
+      computeCoverage([dormant, overdueYearRound], new Map(), new Map(), now),
+    ).toBeCloseTo(0, 10);
+  });
+
+  test('in-window seasonal task included in mean (not excluded)', () => {
+    const now = new Date('2026-11-15T12:00:00.000Z'); // November — in Oct-Mar wrap
+    const inSeasonHealthy = makeTask({
+      id: 't-in-season',
+      frequency_days: 30,
+      active_from_month: 10,
+      active_to_month: 3,
+    });
+    const latest = new Map<string, CompletionRecord>();
+    // Completed today → healthy
+    latest.set(
+      't-in-season',
+      makeCompletion('t-in-season', now.toISOString()),
+    );
+    expect(
+      computeCoverage([inSeasonHealthy], latest, new Map(), now),
+    ).toBeCloseTo(1.0, 10);
+  });
+});
