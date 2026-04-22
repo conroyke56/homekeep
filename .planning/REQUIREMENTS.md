@@ -188,29 +188,35 @@
 
 ## v1.1 Requirements (Scheduling & Flexibility)
 
-**Audit:** `.planning/v1.1/audit.md` (3,800 words, 5 ideas + 2 cross-cutting Qs).
-**Locked:** 2026-04-22.
-**Constraints:** Additive migrations only. v1.0 data preserved. 311 unit + 23 E2E pass. Coverage ring + early-completion guard intact.
+**Audit:** `.planning/v1.1/audit.md` (original 5-idea audit, all decisions still valid).
+**Addendum:** `.planning/v1.1/audit-addendum-load.md` (LOAD/LVIZ/TCSEM/REBAL household-load thesis correction).
+**Locked:** 2026-04-22 (audit), 2026-04-22 (addendum, with 3 riders approved).
+**Constraints:** Additive migrations only. v1.0 data preserved. 311 unit + 23 E2E pass. Coverage ring + early-completion guard intact. `<100ms` placement budget for 100-task households. Anchored-mode tasks byte-identical to v1.0.
 
 ### One-Off Tasks (OOFT)
 
-- [ ] **OOFT-01**: User can create a task without a frequency (one-off task; `tasks.frequency_days` nullable)
-- [ ] **OOFT-02**: One-off task automatically archives after first completion (atomic with completion write)
-- [ ] **OOFT-03**: One-off tasks appear in the Overdue band from the moment created (next_due = task.created)
+> **Rider 2 (2026-04-22):** OOFT-01..03 are draft pending Phase 11 discuss decision on first-due semantics. Three options on the table: (a) explicit "do by" date required, (b) default `creation + 7 days`, editable, (c) separate "To-do" list with promote-to-scheduled. User leans (a). Final shape locked in Phase 11 CONTEXT.md.
+
+- [ ] **OOFT-01** (draft): User can create a task without a recurring frequency (one-off task; `tasks.frequency_days` nullable)
+- [ ] **OOFT-02** (draft): One-off task automatically archives after first completion (atomic with completion write)
+- [ ] **OOFT-03** (draft): One-off tasks have an explicit due date at creation (per rider 2 lean — confirm in Phase 11 discuss)
 - [ ] **OOFT-04**: Task form distinguishes "Recurring" (with frequency) vs "One-off" (no frequency); anchored mode disallowed for one-off
+- [ ] **OOFT-05**: One-off tasks contribute 1 to the LOAD density map on their due date but are themselves non-smoothable
 
 ### Preferred-Days Constraint (PREF)
 
+> **Reframed:** PREF is now a hard *narrowing constraint applied BEFORE the LOAD load check*, not a standalone post-pass. The PREF-02 forward-search behavior remains, but it's part of the LOAD placement algorithm rather than its own post-step.
+
 - [ ] **PREF-01**: User can set per-task `preferred_days` (any / weekend / weekday) on the task form
-- [ ] **PREF-02**: Scheduler / computeNextDue searches forward up to +6 days from the natural date to land on a matching weekday
-- [ ] **PREF-03**: When natural date already matches the constraint, no shift applied
+- [ ] **PREF-02**: LOAD placement narrows candidate dates to those matching `preferred_days` BEFORE scoring by load (LOAD-05)
+- [ ] **PREF-03**: When the tolerance window contains no matching weekday, search widens forward in 1-day increments up to +6 days from natural ideal
 - [ ] **PREF-04**: Constraint never produces an early date — result is always equal-or-later than the natural cycle date
 
 ### Seasonal Tasks (SEAS)
 
 - [ ] **SEAS-01**: User can set `active_from_month` and `active_to_month` per task (both nullable; both null = year-round)
 - [ ] **SEAS-02**: Out-of-window tasks return `null` from computeNextDue (invisible to scheduler, coverage, and main views)
-- [ ] **SEAS-03**: When the active window opens, computeNextDue returns the start-of-window date (in home timezone) as next_due
+- [ ] **SEAS-03**: When the active window opens, computeNextDue returns the start-of-window date (in home timezone) as next_due (smoothing skipped for the wake-up; LOAD resumes from second cycle)
 - [ ] **SEAS-04**: Cross-year wrap supported: a window like Oct→Mar correctly includes Dec, Jan, Feb
 - [ ] **SEAS-05**: Coverage ring excludes dormant tasks from its mean (treats them like archived)
 - [ ] **SEAS-06**: Dormant tasks render dimmed with "Sleeps until <Mon Year>" badge in By Area and Person views
@@ -225,30 +231,71 @@
 - [ ] **SNZE-02**: Action sheet includes a date picker defaulting to the natural next due
 - [ ] **SNZE-03**: Action sheet has a "Just this time" / "From now on" radio (default: Just this time)
 - [ ] **SNZE-04**: New `schedule_overrides` PB collection stores one-off snoozes `(id, task_id, snooze_until, consumed_at, created)`
-- [ ] **SNZE-05**: computeNextDue consults the latest active (unconsumed) override and returns it instead of the natural next_due
+- [ ] **SNZE-05**: computeNextDue consults the latest active (unconsumed) override BEFORE the smoothed-date branch (snooze trumps LOAD)
 - [ ] **SNZE-06**: Overrides are consumed when the next completion lands after the override date
-- [ ] **SNZE-07**: "From now on" mutates `tasks.anchor_date` directly (no override row written)
+- [ ] **SNZE-07**: "From now on" mutates `tasks.anchor_date` (anchored mode) or `tasks.next_due_smoothed` with a marker flag (cycle mode) directly — no override row written. Marker flag detectable by REBAL preservation rules.
 - [ ] **SNZE-08**: Snoozing into a dormant season prompts an "Extend the active window?" confirmation dialog
 - [ ] **SNZE-09**: Coverage ring uses the snoozed (later) next_due (snoozed tasks don't drag coverage down)
 - [ ] **SNZE-10**: Scheduler ntfy `ref_cycle` keys on the resulting next_due (one notification per effective due date — idempotent re-firing)
 
-### Seed-Stagger First-Run Offset (SDST)
+### Household Load-Aware Scheduling (LOAD)
 
-- [ ] **SDST-01**: `completions.via` enum gains `'seed-stagger'` value
-- [ ] **SDST-02**: `batchCreateSeedTasks` writes one synthetic completion per task with `via='seed-stagger'` and a staggered `completed_at`
-- [ ] **SDST-03**: Stagger algorithm distributes first-due dates evenly within each frequency cohort (no two same-frequency tasks share a first-due date)
-- [ ] **SDST-04**: Stagger respects each task's active months (no first-due placed in a dormant period)
-- [ ] **SDST-05**: History view filters out `via='seed-stagger'` rows
-- [ ] **SDST-06**: Personal stats counters exclude `via='seed-stagger'` rows
-- [ ] **SDST-07**: Partner-completed and area-celebration notifications skip `via='seed-stagger'` rows
+- [ ] **LOAD-01**: New `tasks.next_due_smoothed DATE` field (nullable, additive migration). Stores the smoother's chosen date.
+- [ ] **LOAD-02**: `computeNextDue` returns `next_due_smoothed` when set, falling back to natural; SNZE override still trumps
+- [ ] **LOAD-03**: New pure helper `placeNextDue(task, householdLoad, now)` returns a date within tolerance window of natural ideal
+- [ ] **LOAD-04**: Tolerance window = `min(0.15 * frequency_days, 5)` days each side of ideal (per rider 1 — initial ship; widen to `min(0.15 * freq, 14)` if Phase 12 validation against 30-task test household shows annual clusters remain bunched)
+- [ ] **LOAD-05**: PREF narrows candidate dates BEFORE load scoring (hard constraint preserved)
+- [ ] **LOAD-06**: Anchored-mode tasks bypass smoothing entirely (byte-identical to v1.0)
+- [ ] **LOAD-07**: Seasonal tasks: anchor to window start at wake-up; smoother runs from second cycle onward
+- [ ] **LOAD-08**: Snoozed tasks: SNZE override trumps smoother; snooze date contributes to load map for OTHER tasks' placement
+- [ ] **LOAD-09**: One-off tasks: contribute to load map but not re-smoothable; first due determined by Phase 11 OOFT decision
+- [ ] **LOAD-10**: Smoother runs on task creation AND on task completion (one placement call per event)
+- [ ] **LOAD-11**: Smoothing is forward-only — placing one task never modifies existing tasks' `next_due_smoothed` values
+- [ ] **LOAD-12**: Tiebreaker rules: closest-to-ideal wins, then earlier wins
+- [ ] **LOAD-13**: Single placement call completes in <100ms for households with 100 active tasks (hard performance budget)
+- [ ] **LOAD-14**: New helper `computeHouseholdLoad(tasks, now, windowDays): Map<string, number>` builds the load map from a single PB query
+- [ ] **LOAD-15**: `computeNextDue` branch composition test matrix covers all 6 branches (override, smoothed, anchored, seasonal, one-off, natural) and every meaningful interaction — tests are a hard gate on Phase 12 completion
+
+### Horizon Density Visualization (LVIZ)
+
+- [ ] **LVIZ-01**: HorizonStrip month cells show density indicator proportional to task count in that month
+- [ ] **LVIZ-02**: Tapping a heavy month opens the existing Sheet drawer (already implemented), now with density-aware rendering
+- [ ] **LVIZ-03**: Task rows shifted by the smoother show a `⚖️` badge with tooltip explaining the shift
+- [ ] **LVIZ-04**: Badge appears only when displacement > 0 days
+- [ ] **LVIZ-05**: TaskDetailSheet "Schedule" section shows ideal vs scheduled dates when smoothed
+
+### Task Creation Semantics (TCSEM)
+
+- [ ] **TCSEM-01**: Task form gains optional "Last done" date field in an Advanced collapsible (default collapsed)
+- [ ] **TCSEM-02**: When "Last done" provided in cycle mode: `first_ideal = last_done + frequency_days`, then load-smoothed
+- [ ] **TCSEM-03**: When "Last done" blank: smart-default first-due based on cycle length (≤7d → tomorrow; 8-90d → cycle/4; >90d → cycle/3), then load-smoothed
+- [ ] **TCSEM-04**: New tasks ALWAYS have `next_due_smoothed` populated by TCSEM at creation time
+- [ ] **TCSEM-05**: `batchCreateSeedTasks` calls TCSEM individually per task, updating in-memory load map between tasks, producing a naturally distributed cohort
+- [ ] **TCSEM-06**: SDST is removed: no synthetic `via='seed-stagger'` completions; no `completions.via` enum extension; History/stats/notification filters from SDST are not implemented
+- [ ] **TCSEM-07**: v1.0 task migration: zero changes. Existing tasks with `next_due_smoothed = NULL` continue with natural cadence; LOAD writes a smoothed date at their next post-upgrade completion
+
+### Manual Rebalance (REBAL)
+
+> **Per rider 3:** Forward-only LOAD is only safe if users have a manual escape hatch. Minimal v1.1 surface; richer features (per-task preview, undo, auto-trigger, area-scoped) deferred to v1.2+.
+
+- [ ] **REBAL-01**: Anchored-mode tasks preserved during rebalance (never re-placed)
+- [ ] **REBAL-02**: Tasks with unconsumed `schedule_overrides` rows preserved (snooze user intent wins)
+- [ ] **REBAL-03**: Tasks whose `next_due_smoothed` was last set via SNZE "From now on" preserved (per-task marker flag set by SNZE-07; preservation enforced here)
+- [ ] **REBAL-04**: All other tasks re-run through `placeNextDue` with a fresh `computeHouseholdLoad` map
+- [ ] **REBAL-05**: Settings → Scheduling → "Rebalance schedule" button surfaces the action
+- [ ] **REBAL-06**: Preview modal shows counts only — "Will update: N" + "Will preserve: M" with breakdown by preservation reason (anchored / active snooze / "From now on")
+- [ ] **REBAL-07**: Re-placement processes the bucket-4 residual in ascending ideal-date order, updating in-memory load map between placements (deterministic, matches TCSEM batch pattern)
 
 ### Documentation & Versioning (DOCS)
 
-- [ ] **DOCS-01**: SPEC.md bumped to v0.3
+> **Updated per addendum:** SPEC.md bumps to **v0.4** (not v0.3) because the addendum changes the spec materially — household load smoothing is a new architectural commitment.
+
+- [ ] **DOCS-01**: SPEC.md bumped to v0.4
 - [ ] **DOCS-02**: SPEC.md three stale "MIT" references corrected to AGPL-3.0
-- [ ] **DOCS-03**: SPEC.md gains a v1.1 changelog section documenting all new features and data-model changes
+- [ ] **DOCS-03**: SPEC.md gains a v1.1 changelog section documenting all new features (LOAD, LVIZ, TCSEM, REBAL, OOFT, PREF, SEAS, SNZE) and data-model changes (`tasks.next_due_smoothed`, `tasks.preferred_days`, `tasks.active_from_month`/`to_month`, nullable `tasks.frequency_days`, `schedule_overrides` collection)
 - [ ] **DOCS-04**: PROJECT.md `INFR-12` corrected to AGPL-3.0
-- [ ] **DOCS-05**: SPEC.md documents the new task fields (`preferred_days`, `active_from_month`, `active_to_month`, nullable `frequency_days`), the `schedule_overrides` collection, and the seed-stagger semantic
+- [ ] **DOCS-05**: SPEC.md documents the new task fields, the `schedule_overrides` collection, the LOAD placement algorithm (tolerance window, tiebreakers, forward-only), and REBAL semantics
+- [ ] **DOCS-06**: PROJECT.md "No SMTP" constraint reworded to "SMTP optional, never required"
 
 ## v1.2+ Candidates (deferred)
 
@@ -271,6 +318,21 @@ These were noted as v1.1 in earlier planning but did NOT make it into the locked
 ### Drag-to-Reschedule (deferred from v1.1; replaced by action-sheet snooze)
 
 - **DRAG-01**: Drag tasks between cells in the Horizon strip to reschedule (re-evaluate after v1.1 telemetry on snooze use)
+
+### REBAL extensions (deferred from v1.1 minimal cut)
+
+- **REBAL-V2-01**: Task-by-task change preview in the Rebalance modal (show old → new date per task before applying)
+- **REBAL-V2-02**: Undo toast after Apply rebalance (5-second window to revert)
+- **REBAL-V2-03**: Auto-triggered rebalance — scheduled (e.g. monthly) or prompted ("your Saturdays look heavy this month")
+- **REBAL-V2-04**: Area-scoped rebalance (e.g. "rebalance just Yard area" — needs UI for scope picker)
+
+### LOAD extensions (deferred from v1.1)
+
+- **LOAD-V2-01**: Effort/task-size weighting (quick / medium / big) — single-weight placement is v1.1; effort-weighted load is v1.2+
+- **LOAD-V2-02**: Household capacity settings (max tasks/day, rest days)
+- **LOAD-V2-03**: Completion feedback loop ("too often" / "just right" / "felt overdue") — captured implicitly via snooze patterns in v1.1
+- **LOAD-V2-04**: Learned frequency adjustment based on completion timing patterns
+- **LOAD-V2-05**: Effort-aware horizon visualization (LVIZ shows count, not effort, in v1.1)
 
 ### Additional
 
@@ -402,23 +464,26 @@ These were noted as v1.1 in earlier planning but did NOT make it into the locked
 | SNZE-08 | Phase 13 | Pending |
 | SNZE-09 | Phase 10 | Pending |
 | SNZE-10 | Phase 10 | Pending |
-| SDST-01 | Phase 11 | Pending |
-| SDST-02 | Phase 14 | Pending |
-| SDST-03 | Phase 14 | Pending |
-| SDST-04 | Phase 14 | Pending |
-| SDST-05 | Phase 14 | Pending |
-| SDST-06 | Phase 14 | Pending |
-| SDST-07 | Phase 14 | Pending |
-| DOCS-01 | Phase 15 | Pending |
-| DOCS-02 | Phase 15 | Pending |
-| DOCS-03 | Phase 15 | Pending |
-| DOCS-04 | Phase 15 | Pending |
-| DOCS-05 | Phase 15 | Pending |
+| ~~SDST-01~~ | ~~Phase 11~~ | **REMOVED** (superseded by TCSEM per addendum) |
+| ~~SDST-02..07~~ | ~~Phase 14~~ | **REMOVED** (superseded by TCSEM per addendum) |
+| LOAD-01..15 | TBD | Pending — re-roadmapper will assign |
+| LVIZ-01..05 | TBD | Pending — re-roadmapper will assign |
+| TCSEM-01..07 | TBD | Pending — re-roadmapper will assign |
+| REBAL-01..07 | TBD | Pending — re-roadmapper will assign |
+| OOFT-05 | TBD | Pending — re-roadmapper will assign |
+| PREF-01..04 (reframed) | TBD | Pending — re-roadmapper will reassign per LOAD interaction |
+| SNZE-07 (extended) | TBD | Pending — re-roadmapper will reassign per REBAL preservation flag |
+| DOCS-06 | TBD | Pending — re-roadmapper will assign |
+| DOCS-01 | Phase 15 | Pending — bumped to v0.4 per addendum |
+| DOCS-02..05 | Phase 15 | Pending |
+
+> **Traceability table partial — will be fully regenerated by the re-roadmapper after addendum approval.** Removed SDST rows are marked above for audit history; the rewritten table will drop them entirely.
 
 **Coverage:**
 - v1.0 requirements: 71 total → all mapped, all complete
-- v1.1 requirements: 40 total → all mapped (Phase 10: 5, Phase 11: 13, Phase 12: 5, Phase 13: 6, Phase 14: 6, Phase 15: 5)
+- v1.1 requirements: 69 total → 30 partially mapped (Phase 10/11/13/15 stable from initial roadmap), 39 awaiting re-roadmap with revised phase shape (LOAD/LVIZ/TCSEM/REBAL inserted, SDST removed, ~9 phases total)
+- OOFT-01..03 are draft pending Phase 11 discuss decision (rider 2)
 
 ---
 *Requirements defined: 2026-04-20*
-*Last updated: 2026-04-22 — v1.1 REQ-IDs mapped to phases 10-15 (roadmapper locked)*
+*Last updated: 2026-04-22 — v1.1 scope expanded per LOAD addendum + 3 riders (LOAD/LVIZ/TCSEM/REBAL added, SDST removed, PREF reframed, OOFT draft, DOCS bumped to v0.4). Traceability table partial; re-roadmap pending. Total: 69 v1.1 REQs.*

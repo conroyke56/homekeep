@@ -10,17 +10,20 @@ The household's recurring maintenance is visible, evenly distributed, and nothin
 
 ## Current Milestone: v1.1 Scheduling & Flexibility
 
-**Goal:** Give users finer control over WHEN tasks fire — one-off tasks, weekday/weekend constraints, seasonal dormancy, and manual reschedule (snooze + permanent shift) — without breaking v1.0 data, the coverage ring, or the early-completion guard.
+**Goal:** Deliver the SPEC thesis — *"spread the year's work evenly across weeks so nothing piles up"* — by making tasks know about each other. Per-task flexibility (one-off, preferred-days, seasonal, snooze) becomes the substrate; household-global LOAD smoothing is the user-visible payoff.
 
 **Target features:**
-- One-off tasks (`frequency_days` nullable; auto-archive on completion)
-- Per-task `preferred_days` constraint (any/weekend/weekday) — scheduler searches forward to land on a matching weekday
-- Seasonal tasks (`active_from_month` + `active_to_month`) with cross-year wrap, dormancy-aware coverage, and "Sleeps until" badge
-- Manual reschedule via action sheet ("Just this time" → `schedule_overrides` table; "From now on" → mutate `tasks.anchor_date` directly)
-- First-run seed offset (stagger first-due dates across cycle via `via='seed-stagger'` synthetic completions, filtered from History/stats/notifications)
-- SPEC.md → v0.3 with v1.1 changelog and MIT→AGPL drift fix (also fixes `INFR-12`)
+- **LOAD** — Household load-aware placement algorithm replacing naive `last_completion + frequency_days`. Stored per-task in nullable `tasks.next_due_smoothed`. Forward-only; <100ms for 100 tasks.
+- **LVIZ** — Horizon density visualization + ⚖️ badge on shifted dates (UI honesty)
+- **TCSEM** — Task creation semantics with optional "Last done" field + smart-default first-due based on cycle length. Subsumes the v1.0 onboarding clumping problem (no synthetic completions needed)
+- **REBAL** — Manual rebalance escape hatch in Settings (counts-only preview; honors anchored, snoozes, "From now on" intent)
+- **OOFT** — One-off tasks (data model TBD in Phase 11 discuss per rider 2)
+- **PREF** — Per-task preferred-days as LOAD-narrowing hard constraint
+- **SEAS** — Seasonal tasks with `active_from_month`/`to_month`, cross-year wrap, dormancy-aware coverage, "Sleeps until" badge
+- **SNZE** — Snooze + permanent reschedule action sheet (`schedule_overrides` collection; "From now on" mutates anchor or smoothed date with marker flag for REBAL preservation)
+- **DOCS** — SPEC.md → **v0.4** with full v1.1 changelog and MIT→AGPL drift fix (also fixes `INFR-12`)
 
-**Key context:** Discovery audit produced `.planning/v1.1/audit.md` (3,800 words) before scoping. All v1.1 migrations are additive and backward-compatible — v1.0.0 installs upgrading via `:1` or `:latest` lose nothing. Phase numbering continues from Phase 8 (no `--reset-phase-numbers`).
+**Key context:** Discovery audit (`.planning/v1.1/audit.md`, 3,800 words) plus addendum (`.planning/v1.1/audit-addendum-load.md`, 3,400 words, 3 riders approved) before scoping. All v1.1 migrations additive and backward-compatible — v1.0.0 installs upgrading via `:1` or `:latest` lose nothing. v1.0 task data is not modified; smoothing adopts at next post-upgrade completion. Anchored-mode tasks remain byte-identical to v1.0 (the explicit opt-out from smoothing). Phase numbering continues from Phase 10 (Phase 8/9 were post-v1.0.0-rc1 UX polish).
 
 ## Requirements
 
@@ -30,14 +33,17 @@ All 71 v1.0 requirements shipped (AUTH/HOME/AREA/TASK/COMP/VIEW/AREA-V/PERS/HIST
 
 ### Active (v1.1)
 
-See `REQUIREMENTS.md` for full REQ-IDs. Summary:
+See `REQUIREMENTS.md` for full REQ-IDs (69 total). Summary:
 
-- [ ] **OOFT** — One-off tasks (Idea 1)
-- [ ] **PREF** — Preferred-days hard constraint (Idea 2)
-- [ ] **SEAS** — Seasonal tasks with active months (Idea 5, Q2)
-- [ ] **SNZE** — Snooze + permanent reschedule via action sheet (Idea 4, Q1)
-- [ ] **SDST** — First-run seed-stagger offset (Idea 3)
-- [ ] **DOCS** — SPEC.md v0.3 + AGPL drift fix + v1.1 changelog
+- [ ] **LOAD** (15) — Household load-aware scheduler (the thesis-deliverer)
+- [ ] **LVIZ** (5) — Horizon density visualization + ⚖️ shift badges
+- [ ] **TCSEM** (7) — Task creation semantics + smart-default first-due (subsumes SDST)
+- [ ] **REBAL** (7) — Settings → "Rebalance schedule" minimal v1.1 surface
+- [ ] **OOFT** (5) — One-off tasks (3 draft REQs pending Phase 11 discuss decision)
+- [ ] **PREF** (4) — Preferred-days as LOAD-narrowing constraint
+- [ ] **SEAS** (10) — Seasonal tasks with active months
+- [ ] **SNZE** (10) — Snooze + permanent reschedule via action sheet
+- [ ] **DOCS** (6) — SPEC.md v0.4 + AGPL drift fix + changelog
 
 ### Out of Scope
 
@@ -74,7 +80,7 @@ See `REQUIREMENTS.md` for full REQ-IDs. Summary:
 - **Container**: Single Docker image under 300MB, serves both processes
 - **Data**: All state in one `./data` volume — backup = copy folder
 - **No cloud**: Zero outbound telemetry, no paid APIs, no cloud dependencies
-- **No SMTP**: v1 invites are link-only; no email delivery requirement
+- **SMTP optional, never required**: v1 invites are link-only and no feature requires SMTP, but if an operator configures it (e.g. for built-in PB password reset) the app uses it
 - **Platform**: Must run on amd64 + arm64 (Pi, Apple Silicon, ARM NAS)
 
 ## Key Decisions
@@ -92,6 +98,13 @@ See `REQUIREMENTS.md` for full REQ-IDs. Summary:
 | v1.1: action-sheet reschedule, no drag | Mobile-first PWA; 58px Horizon cells make drag fragile; same user problem at half the cost | — v1.1 Pending |
 | v1.1: seed-stagger via `completions.via='seed-stagger'` | Smaller schema delta than new field; History/stats/notifications filter on `via` | — v1.1 Pending |
 | v1.1: phase numbering continues from 10 | Phases are absolute project milestones, not per-milestone counters. Phases 8 (UX Polish) + 9 (UX Audit Fix) were consumed by post-v1.0.0 polish work between RC1 and v1.1 milestone start; retroactively logged in ROADMAP.md | — v1.1 Pending |
+| v1.1: scope expanded — household load smoothing as first-class | Original audit's per-task flexibility didn't deliver the SPEC thesis ("spread the year's work evenly"). Tasks must know about each other. Added LOAD/LVIZ/TCSEM/REBAL; removed SDST. Audit addendum at `.planning/v1.1/audit-addendum-load.md` | — v1.1 Pending |
+| v1.1 LOAD: smoothed date storage on tasks (not completions) | One nullable `tasks.next_due_smoothed DATE` field. NULL = v1.0 behavior, zero migration. TCSEM sets at creation, LOAD updates at completion. Single source of truth | — v1.1 Pending |
+| v1.1 LOAD: forward-only smoothing | Adding/completing one task never modifies existing tasks' next_due_smoothed. Predictability > optimality. Manual escape hatch via REBAL phase covers accumulated clumping | — v1.1 Pending |
+| v1.1 LOAD: tolerance window `min(0.15 * freq, 5)` initial | Per rider 1: ship ±5 cap, validate against 30-task test household in Phase 12, widen to ±14 if annual clusters remain bunched | — v1.1 Pending |
+| v1.1 OOFT: first-due semantics deferred to Phase 11 discuss | Per rider 2: 3 candidate shapes — explicit do-by date, default +7d editable, separate to-do list. User leans (a) explicit do-by | — v1.1 Pending |
+| v1.1 REBAL: minimal v1.1 surface, richer features deferred | Per rider 3: ship Settings button + counts-only preview + apply. Per-task preview, undo, auto-trigger, area-scoped all deferred to v1.2+ | — v1.1 Pending |
+| v1.1 SPEC bump v0.3 → v0.4 | Addendum changes the spec materially (load smoothing is a new architectural commitment), not just a feature changelog | — v1.1 Pending |
 
 ## Evolution
 
@@ -111,4 +124,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-22 — v1.1 Scheduling & Flexibility milestone started (audit at `.planning/v1.1/audit.md`)*
+*Last updated: 2026-04-22 — v1.1 scope expanded per addendum + 3 riders. Added LOAD/LVIZ/TCSEM/REBAL; removed SDST; PREF reframed; OOFT-01..03 draft; SPEC bump v0.3→v0.4; SMTP nit reworded. Net: +23 REQs, 6→9 phases. Re-roadmap pending.*
