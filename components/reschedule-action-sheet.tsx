@@ -164,6 +164,17 @@ export function RescheduleActionSheet({
       } else {
         toast.error(res.formError);
       }
+    } catch {
+      // WR-01: mirror band-view.tsx handleTap — a network-layer rejection
+      // or a Date RangeError from a malformed pickedDate would otherwise
+      // clear `pending` via finally but leave the sheet open with no user
+      // feedback. Generic sanitized message keeps the failure visible
+      // without leaking transport details.
+      toast.error(
+        which === 'just-this-time'
+          ? 'Could not save snooze'
+          : 'Could not reschedule task',
+      );
     } finally {
       setPending(false);
     }
