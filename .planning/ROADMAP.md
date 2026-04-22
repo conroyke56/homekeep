@@ -260,14 +260,17 @@ Plans:
   4. A single `placeNextDue` call for a household with 100 active tasks completes in under 100ms end-to-end (measured budget, asserted in tests)
   5. `computeNextDue` branch composition test matrix is complete: all 6 branches (override, smoothed, anchored, seasonal, one-off, natural) and every meaningful interaction between them are explicitly tested, no implicit fall-through assumptions — this matrix is a hard gate on phase completion (LOAD-15)
   6. v1.0 tasks with `next_due_smoothed = NULL` continue to read natural cadence until their next post-upgrade completion, at which point LOAD writes a smoothed date (TCSEM-07 precondition holds for Phase 13)
-**Plans**: TBD (estimate 4-5)
+**Plans**: 4 plans
 
 > **Hard gate (user-flagged, highest-risk code in v1.1):** Phase 12 plan must include a complete branch-composition test matrix covering every combination — this is the highest-risk code in v1.1. Any branch interaction not explicitly tested is a future bug. Phase is not complete until LOAD-15 is green.
 
 > **Rider 1 — tolerance window validation:** Tolerance window ships at `min(0.15 * freq, 5)` initially. During Phase 12 verification, validate against a 30-task realistic test household (1 / 7 / 14 / 30 / 90 / 365-day frequencies). If annual-cycle clusters remain bunched, widen to `min(0.15 * freq, 14)` before phase complete. The default ±5 → upgrade ±14 decision may require updating LOAD-04 REQ text and tests.
 
 Plans:
-- [ ] 12-01: TBD
+- [ ] 12-01-P01-PLAN.md — Wave 1: additive migration (1745280002) + lib/load-smoothing.ts (placeNextDue + computeHouseholdLoad pure helpers) + isOoftTask helper export + zod schema extension + 18+ unit tests for helpers
+- [ ] 12-02-P01-PLAN.md — Wave 2: computeNextDue smoothed branch insertion (D-02 order with D-03 anchored bypass + D-15 seasonal-wakeup handshake + T-12-07 Invalid Date defense) + 21-case LOAD-15 branch composition matrix hard gate
+- [ ] 12-03-P01-PLAN.md — Wave 3: completeTaskAction step 7.5 batch extension (atomic placement op on cycle && !OOFT, D-13 error fallback) + 3 action-level bypass invariant unit tests
+- [ ] 12-04-P01-PLAN.md — Wave 4: LOAD-13 perf benchmark (<100ms, 100-task) + 5-scenario disposable-PB integration suite on port 18100 (migration / completion flow / tz-drift / rider-1 validation / v1.0 upgrade) + Rider-1 tolerance decision checkpoint
 
 ### Phase 13: Task Creation Semantics
 **Goal**: Every new task — whether custom or seed-batched — enters the system with a load-smoothed `next_due_smoothed` already populated, eliminating the v1.0 onboarding clumping problem at its source. "Last done" becomes an optional Advanced field; smart defaults handle the common case; SDST synthetic completions are fully removed
