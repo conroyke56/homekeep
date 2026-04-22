@@ -303,7 +303,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 14-01: TBD
+- [x] 14-01-P01-PLAN.md — Wave 1 (data-adjacent): seed library +4 seasonal entries (SEAS-09) + task-form Active months subsection inside the Phase 13 Advanced collapsible (SEAS-07) + AnchoredWarningAlert non-blocking amber alert with >50% dormant-cycle projection math (SEAS-08) + filterCompletions SEAS-10 regression test locking dormancy-agnostic history
 
 ### Phase 15: One-Off & Reschedule UI
 **Goal**: Users can create one-off tasks and rearrange any task's next occurrence from any view via a mobile-friendly action sheet — snoozing (one-off override) or permanently shifting ("From now on" mutates anchor / `next_due_smoothed` with a marker flag preserved by REBAL) without needing to edit the task, with a confirmation dialog when a snooze escapes the active season
@@ -386,7 +386,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 11. Task Model Extensions | 0/4 | Not started | - |
 | 12. Load-Smoothing Engine | 4/4 | Complete    | 2026-04-22 |
 | 13. Task Creation Semantics | 0/3 | Not started | - |
-| 14. Seasonal UI & Seed Library | 0/3 | Not started | - |
+| 14. Seasonal UI & Seed Library | 1/3 | In progress | 14-01 complete (Wave 1) |
 | 15. One-Off & Reschedule UI | 0/3 | Not started | - |
 | 16. Horizon Density Visualization | 0/2 | Not started | - |
 | 17. Manual Rebalance | 0/3 | Not started | - |

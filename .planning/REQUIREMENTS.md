@@ -233,10 +233,14 @@
 - [x] **SEAS-05
 **: Coverage ring excludes dormant tasks from its mean (treats them like archived)
 - [ ] **SEAS-06**: Dormant tasks render dimmed with "Sleeps until <Mon Year>" badge in By Area and Person views
-- [ ] **SEAS-07**: Task form gains an optional "Active months" section (from/to month dropdowns)
-- [ ] **SEAS-08**: Form warns (does not block) when an anchored task's series falls predominantly outside its active window
-- [ ] **SEAS-09**: Seed library extends with two seasonal task pairs (mowing warm/cool; HVAC seasonal pair)
-- [ ] **SEAS-10**: History view always shows completions regardless of current season state
+- [x] **SEAS-07
+**: Task form gains an optional "Active months" section (from/to month dropdowns)
+- [x] **SEAS-08
+**: Form warns (does not block) when an anchored task's series falls predominantly outside its active window
+- [x] **SEAS-09
+**: Seed library extends with two seasonal task pairs (mowing warm/cool; HVAC seasonal pair)
+- [x] **SEAS-10
+**: History view always shows completions regardless of current season state
 
 ### Snooze & Permanent Reschedule (SNZE)
 

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Scheduling & Flexibility
-status: verifying
-stopped_at: Completed 13-02-P01-PLAN.md
-last_updated: "2026-04-22T12:40:14.878Z"
+status: executing
+stopped_at: Completed 14-01-P01-PLAN.md
+last_updated: "2026-04-22T13:23:35.628Z"
 last_activity: 2026-04-22
 progress:
   total_phases: 19
   completed_phases: 11
-  total_plans: 38
-  completed_plans: 41
+  total_plans: 40
+  completed_plans: 42
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** The household's recurring maintenance is visible, evenly distributed, and nothing falls through the cracks — without creating anxiety or guilt.
-**Current focus:** Phase 13 — Task Creation Semantics
+**Current focus:** Phase 14 — Seasonal UI & Seed Library
 
 ## Current Position
 
-Phase: 13 (Task Creation Semantics) — EXECUTING
+Phase: 14 (Seasonal UI & Seed Library) — EXECUTING
 Plan: 2 of 2
-Status: Phase complete — ready for verification
+Status: Ready to execute
 Last activity: 2026-04-22
 
 Progress: [██████████] 100%
@@ -107,6 +107,7 @@ Progress: [██████████] 100%
 | Phase 12 P04 | 10min | 3 tasks | 2 files |
 | Phase 13 P01 | 10min | 3 tasks | 7 files |
 | Phase 13 P02 | ~8min | 2 tasks | 5 files |
+| Phase 14 P1 | 12min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -301,6 +302,7 @@ Recent decisions affecting current work:
 - Phase 13 Plan 02: TCSEM bridge preserved when threading last_done — computeFirstIdealDate runs first, then synthetic lastCompletion offset dance for placeNextDue (NEVER short-circuit by passing lastDone as placeNextDue's lastCompletion arg; would collapse TCSEM-03 smart-default branch)
 - Phase 13 Plan 02: Scenario 1 uses relative last_done (now-12d) + widened [now+10,now+26] assertion window — avoids time-travel test-flake and Rider-1 tolerance drift while preserving TCSEM-02 vs TCSEM-03 branch distinguishability
 - Phase 13 Plan 02: Port 18101 claimed for tcsem-integration.test.ts (allocation register now 18090..18101; 18102+ reserved for Phase 14+)
+- Phase 14 Plan 1: Advanced collapsible outer guard loosened from cycle-only to create-only, with inner fields self-gating (last_done cycle-only, Active months both-modes). AnchoredWarningAlert strictly >0.5 threshold per D-04. updateTask consumes active_from/to (unlike last_done). '' = clear PB convention preserved.
 
 ### Pending Todos
 
@@ -326,8 +328,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-22T12:40:14.858Z
-Stopped at: Completed 13-02-P01-PLAN.md
+Last session: 2026-04-22T13:23:29.213Z
+Stopped at: Completed 14-01-P01-PLAN.md
 Resume file: None
 
-**Planned Phase:** 13 () — 0 plans — 2026-04-22T12:08:50.461Z
+**Planned Phase:** 14 () — 0 plans — 2026-04-22T13:08:37.267Z
