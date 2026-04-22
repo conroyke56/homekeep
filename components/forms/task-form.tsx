@@ -340,8 +340,14 @@ export function TaskForm({
         computes firstIdeal = last_done + frequency_days, then runs the
         load-smoothing placement. Blank last_done routes to TCSEM-03's
         smart-default (≤7 → tomorrow; 8..90 → cycle/4; >90 → cycle/3).
+
+        Phase 13 review WR-02: hide in edit mode. updateTask (D-07)
+        silently drops last_done — showing the input would let users
+        type a date, press Save, and see nothing change ("lying UI").
+        Edit-time re-placement is Phase 15+ scope; match the form to
+        the server's creation-only scope.
       */}
-      {scheduleMode === 'cycle' && (
+      {mode === 'create' && scheduleMode === 'cycle' && (
         <Collapsible className="space-y-3">
           <CollapsibleTrigger asChild>
             <Button
