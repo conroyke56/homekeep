@@ -236,3 +236,51 @@ describe('taskSchema — Phase 11 zod refinements (OOFT-03, SEAS-01, T-11-01)', 
     }
   });
 });
+
+describe('Phase 14 (SEAS-08, D-04): anchored-warning projection math', () => {
+  // Projection math verified against isInActiveWindow. The form's
+  // AnchoredWarningAlert inlines the same projection loop (6 cycles
+  // = anchor + k×freq for k=0..5), counts dormant, and shows the
+  // amber alert iff the dormant ratio is STRICTLY > 0.5 (D-04).
+  // These tests lock the two threshold-boundary scenarios that the
+  // UI component would render under.
+
+  function projectDormantRatio(
+    anchorIso: string,
+    freqDays: number,
+    from: number,
+    to: number,
+  ): number {
+    // Mirror of AnchoredWarningAlert's inlined math (bounded to 6
+    // projections per D-04, O(1)). Kept as a test-local helper
+    // rather than exported from the form component — projection is
+    // a UI concern; the MATH it depends on (isInActiveWindow)
+    // already has its own test coverage upstream.
+    const anchor = new Date(anchorIso);
+    let dormantCount = 0;
+    for (let k = 0; k < 6; k++) {
+      const projected = new Date(anchor.getTime() + k * freqDays * 86400000);
+      const month = projected.getUTCMonth() + 1;
+      if (!isInActiveWindow(month, from, to)) dormantCount++;
+    }
+    return dormantCount / 6;
+  }
+
+  test('anchor=2026-07-15, freq=365, window=Oct-Mar → all 6 projections in July (dormant) → ratio=1.0 → warning shown', () => {
+    // anchor + k*365 days stays in July every cycle → 100% dormant
+    // against an Oct-Mar window. Ratio strictly > 0.5 → warning.
+    const ratio = projectDormantRatio('2026-07-15', 365, 10, 3);
+    expect(ratio).toBe(1.0);
+    expect(ratio > 0.5).toBe(true);
+  });
+
+  test('anchor=2026-11-15, freq=30, window=Oct-Mar → projections span Nov→Apr → at most 1/6 dormant → ratio<=0.5 → no warning', () => {
+    // Projections: Nov 15, Dec 15, Jan 14, Feb 13, Mar 15, Apr 14.
+    // Only the last (Apr) falls outside the Oct-Mar window → 1/6 ≈
+    // 0.167. Ratio <= 0.5 → no warning (D-04 threshold is STRICTLY
+    // greater than 50%).
+    const ratio = projectDormantRatio('2026-11-15', 30, 10, 3);
+    expect(ratio).toBeLessThanOrEqual(0.5);
+    expect(ratio > 0.5).toBe(false);
+  });
+});

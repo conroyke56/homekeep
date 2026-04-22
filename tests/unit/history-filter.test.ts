@@ -215,4 +215,36 @@ describe('filterCompletions', () => {
     const result = filterCompletions(rows, filter, new Map(), now, TZ);
     expect(result).toEqual(rows);
   });
+
+  test('SEAS-10: dormant task completions appear in history (dormancy does not filter)', () => {
+    // now = July 15 2026 (out of Oct-Mar active window for a hypothetical
+    // winter-only task). The completion is from January — inside the
+    // window at completion time, but the task is currently dormant.
+    // filterCompletions does not accept a task list or any dormancy
+    // parameters; SEAS-10 guarantees the historical completion survives
+    // the filter regardless of current seasonal state. Signature length
+    // (5 formal params) locks the contract at the type level too.
+    const now = new Date('2026-07-15T12:00:00.000Z');
+    const completion = c(
+      'c1',
+      't-heater',
+      '2026-01-10T10:00:00.000Z',
+      'u1',
+    );
+    const taskAreaMap = new Map<string, string>([['t-heater', 'a1']]);
+    const result = filterCompletions(
+      [completion],
+      { personId: null, areaId: null, range: 'all' },
+      taskAreaMap,
+      now,
+      TZ,
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('c1');
+    // Defensive: the filter never accepted a task list or a dormancy
+    // predicate, so there's no surface that could have been wired to
+    // filter by active_from/to. 5 formal params: completions, filter,
+    // taskAreaMap, now, timezone.
+    expect(filterCompletions.length).toBe(5);
+  });
 });
