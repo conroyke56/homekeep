@@ -1,10 +1,23 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { addDays } from 'date-fns';
 import { createServerClient } from '@/lib/pocketbase-server';
 import { assertMembership } from '@/lib/membership';
 import { SEED_LIBRARY } from '@/lib/seed-library';
 import { batchCreateSeedsSchema } from '@/lib/schemas/seed';
+import { type Completion, type Task } from '@/lib/task-scheduling';
+import {
+  getCompletionsForHome,
+  reduceLatestByTask,
+} from '@/lib/completions';
+import { getActiveOverridesForHome } from '@/lib/schedule-overrides';
+import {
+  computeFirstIdealDate,
+  computeHouseholdLoad,
+  isoDateKey,
+  placeNextDue,
+} from '@/lib/load-smoothing';
 
 /**
  * Onboarding seed server action (05-03 Task 1, ONBD-01/02/03).
@@ -87,11 +100,128 @@ export async function batchCreateSeedTasks(input: {
     }
   }
 
-  // Atomic batch: N tasks.create + 1 homes.update. If any op fails, PB
-  // rolls the whole transaction back (T-05-03-10).
+  // ─── Phase 13 TCSEM-05 + D-08: load-map threading ──────────────────
+  // Pre-compute next_due_smoothed per seed, threading an in-memory load
+  // Map forward across seeds so a cohort naturally distributes. Each
+  // placement mutates the Map (+1 at the chosen ISO date key) so the
+  // NEXT seed's scoring sees the prior seed's chosen date.
+  //
+  // Seeds are all schedule_mode='cycle' (D-12 Phase 5 invariant) with
+  // real positive frequencies (seed-library schema: min(1).max(365)) —
+  // no anchored or OOFT bypasses possible here.
+  //
+  // Atomic-batch preserved (T-05-03-10 + D-09 Phase 5 contract): the
+  // N tasks.create + 1 homes.update still ship in ONE pb.createBatch()
+  // transaction. Phase 13's only addition is the pre-computed
+  // next_due_smoothed per seed; the transaction shape is unchanged.
   try {
+    const now = new Date();
+
+    // Fetch home timezone for isoDateKey alignment (Pitfall 7 — same
+    // tz on write + lookup sides).
+    const home = await pb
+      .collection('homes')
+      .getOne(parsed.data.home_id, { fields: 'id,timezone' });
+    const homeTz = (home.timezone as string) ?? 'UTC';
+
+    // Fetch existing home state for the load map. Seeds run on fresh
+    // onboarding but also potentially on a home that already has tasks
+    // (user re-opens the wizard after dismissing — defensive).
+    const existingTasks = (await pb.collection('tasks').getFullList({
+      filter: pb.filter('home_id = {:hid} && archived = false', {
+        hid: parsed.data.home_id,
+      }),
+      fields: [
+        'id', 'created', 'archived',
+        'frequency_days', 'schedule_mode', 'anchor_date',
+        'preferred_days', 'active_from_month', 'active_to_month',
+        'due_date', 'next_due_smoothed',
+      ].join(','),
+    })) as unknown as Task[];
+
+    const existingTaskIds = existingTasks.map((t) => t.id);
+    const existingCompletions = await getCompletionsForHome(
+      pb, existingTaskIds, now,
+    );
+    const existingLatestByTask = reduceLatestByTask(existingCompletions);
+    const overridesByTask = await getActiveOverridesForHome(
+      pb, parsed.data.home_id,
+    );
+
+    const householdLoad = computeHouseholdLoad(
+      existingTasks,
+      existingLatestByTask,
+      overridesByTask,
+      now,
+      120,
+      homeTz,
+    );
+
+    // Per-seed placement: compute, place, mutate load map, record ISO.
+    // index → ISO string (or absent entry = fallback '' in create body).
+    const placedDates = new Map<number, string>();
+
+    for (let i = 0; i < parsed.data.selections.length; i++) {
+      const s = parsed.data.selections[i];
+      try {
+        // Seeds have no last_done (D-08 clause 1 — "seeds rarely have
+        // last_done"). Smart default kicks in per TCSEM-03.
+        const firstIdeal = computeFirstIdealDate(
+          'cycle',
+          s.frequency_days,
+          null, // seeds never carry a last-done date
+          now,
+        );
+
+        // Synthesize Task + lastCompletion (see createTask Task 2
+        // rationale). placeNextDue's internal naturalIdeal =
+        // baseIso + freq = firstIdeal.
+        const syntheticLastCompletion: Completion = {
+          completed_at: addDays(firstIdeal, -s.frequency_days).toISOString(),
+        };
+        const syntheticTask: Task = {
+          id: `seed-pending-${i}`,
+          created: now.toISOString(),
+          archived: false,
+          frequency_days: s.frequency_days,
+          schedule_mode: 'cycle',
+          anchor_date: null,
+          preferred_days: null,
+        };
+
+        const placedDate = placeNextDue(
+          syntheticTask,
+          syntheticLastCompletion,
+          householdLoad,
+          now,
+          { timezone: homeTz },
+        );
+
+        // D-08 step 3: mutate the load map in-place so seed i+1's
+        // scoring sees seed i's chosen date. isoDateKey is the SAME
+        // helper used by computeHouseholdLoad + placeNextDue — DO
+        // NOT hand-roll YYYY-MM-DD (Pitfall 7).
+        const key = isoDateKey(placedDate, homeTz);
+        householdLoad.set(key, (householdLoad.get(key) ?? 0) + 1);
+
+        placedDates.set(i, placedDate.toISOString());
+      } catch (e) {
+        console.warn(
+          `[batchCreateSeedTasks] seed ${i} placement failed (falling back to natural):`,
+          (e as Error).message,
+        );
+        // placedDates absent for this index → create body uses '' fallback.
+        // D-06 per-seed best-effort.
+      }
+    }
+
+    // Atomic batch: N tasks.create + 1 homes.update. If any op fails,
+    // PB rolls the whole transaction back (T-05-03-10 preserved from
+    // Phase 5). Phase 13 addition: next_due_smoothed pre-computed per
+    // seed, included in the create body directly.
     const batch = pb.createBatch();
-    for (const s of parsed.data.selections) {
+    for (let i = 0; i < parsed.data.selections.length; i++) {
+      const s = parsed.data.selections[i];
       batch.collection('tasks').create({
         home_id: parsed.data.home_id,
         area_id: s.area_id,
@@ -105,6 +235,9 @@ export async function batchCreateSeedTasks(input: {
         assigned_to_id: '',
         notes: '',
         archived: false,
+        // Phase 13 (TCSEM-04): pre-computed smoothed date; '' for any
+        // seed whose placement threw (D-06 fallback).
+        next_due_smoothed: placedDates.get(i) ?? '',
       });
     }
     batch.collection('homes').update(parsed.data.home_id, {

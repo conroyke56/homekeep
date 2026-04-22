@@ -113,8 +113,8 @@ async function loadBatchCreateSeedTasks() {
   return (await import('@/lib/actions/seed')).batchCreateSeedTasks;
 }
 
-const HOME_ID = 'home-1234567890x'; // 15 chars
-const AREA_ID = 'area-1234567890x'; // 15 chars
+const HOME_ID = 'home1234567890x'; // 15 chars
+const AREA_ID = 'area1234567890x'; // 15 chars
 
 function makeSelection(
   overrides: Partial<{
