@@ -77,7 +77,11 @@ export function TaskBand({
               task={{
                 id: t.id,
                 name: (t as ClassifiedTask & { name: string }).name,
-                frequency_days: t.frequency_days,
+                // Phase 11: frequency_days widened to `number | null` for
+                // OOFT (Plan 11-02). Classified tasks reaching this band
+                // already survived computeNextDue, so a non-null number
+                // is guaranteed; cast narrows for the UI projection.
+                frequency_days: t.frequency_days as number,
                 effective: (
                   t as ClassifiedTask & {
                     effective?: import('@/lib/assignment').EffectiveAssignee;
@@ -152,7 +156,8 @@ export function TaskBand({
                     task={{
                       id: t.id,
                       name: (t as ClassifiedTask & { name: string }).name,
-                      frequency_days: t.frequency_days,
+                      // Phase 11: see TaskRow projection comment above.
+                      frequency_days: t.frequency_days as number,
                     }}
                     onComplete={onComplete}
                     onDetail={onDetail}

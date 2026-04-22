@@ -61,9 +61,12 @@ export function computeCoverage(
       0,
       (now.getTime() - nextDue.getTime()) / 86400000,
     );
+    // Phase 11: frequency_days is now `number | null`. computeNextDue
+    // above returns null for OOFT (or throws on null in the current body);
+    // reaching this line implies a non-null number — cast is safe.
     const health = Math.max(
       0,
-      Math.min(1, 1 - overdueDays / task.frequency_days),
+      Math.min(1, 1 - overdueDays / (task.frequency_days as number)),
     );
     sum += health;
     counted += 1;

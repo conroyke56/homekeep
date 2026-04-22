@@ -417,7 +417,11 @@ export function BandView({
             ? {
                 id: detailTask.id,
                 name: detailTask.name,
-                frequency_days: detailTask.frequency_days,
+                // Phase 11: frequency_days widened to `number | null` at
+                // the Task type (OOFT support). Detail-sheet projection
+                // is v1.0/v1.1-recurring only — cast narrows for the UI.
+                // Plan 11-02 / Phase 15 will add OOFT-shape handling.
+                frequency_days: detailTask.frequency_days as number,
                 schedule_mode: detailTask.schedule_mode,
                 anchor_date: detailTask.anchor_date,
                 notes: detailTask.notes ?? '',
