@@ -281,7 +281,8 @@
 **: Smoothing is forward-only — placing one task never modifies existing tasks' `next_due_smoothed` values
 - [x] **LOAD-12
 **: Tiebreaker rules: closest-to-ideal wins, then earlier wins
-- [ ] **LOAD-13**: Single placement call completes in <100ms for households with 100 active tasks (hard performance budget)
+- [x] **LOAD-13
+**: Single placement call completes in <100ms for households with 100 active tasks (hard performance budget)
 - [x] **LOAD-14
 **: New helper `computeHouseholdLoad(tasks, now, windowDays): Map<string, number>` builds the load map from a single PB query
 - [x] **LOAD-15

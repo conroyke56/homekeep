@@ -32,7 +32,7 @@ v1.1 extends v1.0 with household-global load-aware scheduling (the SPEC thesis-d
 
 - [ ] **Phase 10: Schedule Override Foundation** - `schedule_overrides` PB collection + `computeNextDue` override branch threaded through every caller (coverage, scheduler, horizon, band classification)
 - [x] **Phase 11: Task Model Extensions** - Nullable `frequency_days`, `preferred_days`, `active_from_month`/`active_to_month` fields + scheduler logic for OOFT / PREF / SEAS behaviors. OOFT-01..03 finalized here after `/gsd-discuss-phase 11` locks first-due semantics (rider 2)
-- [ ] **Phase 12: Load-Smoothing Engine** - `tasks.next_due_smoothed` field, `placeNextDue` + `computeHouseholdLoad` helpers, integration into `computeNextDue`; PREF/SEAS/SNZE/OOFT/anchored interactions. **Hard gate: branch-composition test matrix covers all 6 branches and meaningful interactions.**
+- [x] **Phase 12: Load-Smoothing Engine** - `tasks.next_due_smoothed` field, `placeNextDue` + `computeHouseholdLoad` helpers, integration into `computeNextDue`; PREF/SEAS/SNZE/OOFT/anchored interactions. **Hard gate: branch-composition test matrix covers all 6 branches and meaningful interactions.**
 - [ ] **Phase 13: Task Creation Semantics** - Task form "Last done" optional field (Advanced collapsible) + smart-default first-due + `batchCreateSeedTasks` rewrite calling TCSEM per seed with in-memory load map; SDST removal cleanup
 - [ ] **Phase 14: Seasonal UI & Seed Library** - Task form "Active months" section, dimmed + "Sleeps until" rendering in By Area / Person / dashboard, anchored-mode warning, seasonal seed pairs
 - [ ] **Phase 15: One-Off & Reschedule UI** - Task form one-off toggle, Reschedule action sheet with date picker and "Just this time" / "From now on" radio; ExtendWindowDialog for cross-window snoozes
@@ -383,7 +383,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 9. UX Audit Fix | 1/1 | Complete    | 2026-04-21 |
 | 10. Schedule Override Foundation | 0/3 | Not started | - |
 | 11. Task Model Extensions | 0/4 | Not started | - |
-| 12. Load-Smoothing Engine | 2/4 | In progress | - |
+| 12. Load-Smoothing Engine | 4/4 | Complete    | 2026-04-22 |
 | 13. Task Creation Semantics | 0/3 | Not started | - |
 | 14. Seasonal UI & Seed Library | 0/3 | Not started | - |
 | 15. One-Off & Reschedule UI | 0/3 | Not started | - |
