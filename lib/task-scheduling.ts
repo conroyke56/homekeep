@@ -6,7 +6,9 @@ import type { Override } from '@/lib/schedule-overrides';
 
 /**
  * Task scheduling — next-due computation (02-05 Plan, D-13 + SPEC §8.5;
- * 10-02 Plan adds the override branch per D-06 + D-10).
+ * 10-02 Plan adds the override branch per D-06 + D-10; 11-02 Plan adds
+ * seasonal-dormant / seasonal-wakeup / OOFT branches per D-05, D-12, D-16,
+ * D-17).
  *
  * PURE module: no I/O, no wall-clock Date construction, no Date.now. Every
  * call is deterministic given its arguments, which makes the edge-case matrix in
@@ -19,6 +21,13 @@ import type { Override } from '@/lib/schedule-overrides';
  * date-fns' addDays / differenceInDays operate on the UTC epoch and are
  * DST-safe by construction (RESEARCH §Pattern: Next-Due Computation
  * timezone handling note line 1217).
+ *
+ * Phase 11 timezone posture exception: the seasonal branches extract a
+ * calendar month in home timezone (via `toZonedTime`) because "Is task
+ * X dormant this month?" is a home-timezone question. When the caller
+ * omits the 5th `timezone?` param (default undefined), the helpers fall
+ * back to UTC month extraction — acceptable per Pitfall 4 for v1.1
+ * (differs from home-tz exact by at most one day at month boundaries).
  */
 
 export type Task = {
@@ -46,20 +55,35 @@ export type Completion = {
 /**
  * Compute the next-due date for a task.
  *
- * Branch order (short-circuit precedence):
+ * Branch order (short-circuit precedence — D-16 after Phase 11):
  *   1. archived → null
- *   2. frequency validation → throw
+ *   2. frequency validation — throw ONLY when frequency_days is a
+ *      non-null, non-positive-integer (D-05: null is legitimate for OOFT).
  *   3. **override branch** (Phase 10, D-06 + D-10): active + unconsumed
  *      override whose `snooze_until` post-dates the last completion wins.
+ *      D-17: override beats dormant seasonal (user intent > inferred
+ *      dormancy).
  *   4. (Phase 12 will insert the `next_due_smoothed` LOAD branch here — D-07
  *      forward-compatibility.)
- *   5. cycle branch — base + frequency_days.
- *   6. anchored branch — step forward by whole cycles past `now`.
+ *   5. **seasonal-dormant branch** (Phase 11, D-12 + SEAS-02): task has
+ *      an active window, now is outside it, and a completion exists →
+ *      return null (invisible to scheduler / coverage / band views).
+ *   6. **seasonal-wakeup branch** (Phase 11, D-12 + SEAS-03): task has an
+ *      active window and (no completion OR last completion in a prior
+ *      season) → return nextWindowOpenDate at home-tz midnight.
+ *   7. **OOFT branch** (Phase 11, D-05 + OOFT-05): frequency_days === null
+ *      → return due_date when no completion, null otherwise (completed
+ *      OOFT is archived in the same batch; null fall-through is defensive
+ *      against races).
+ *   8. cycle branch — base + frequency_days.
+ *   9. anchored branch — step forward by whole cycles past `now`.
  *
  * Returns:
- *   - `null` if the task is archived.
+ *   - `null` if the task is archived or dormant-seasonal or completed-OOFT.
  *   - `new Date(override.snooze_until)` when an active unconsumed override
  *     applies (see D-10 guard below).
+ *   - `nextWindowOpenDate(...)` when a seasonal task wakes up.
+ *   - `new Date(task.due_date)` when an unborn OOFT task is being read.
  *   - For `cycle` mode: base = lastCompletion?.completed_at ?? task.created;
  *     next_due = base + frequency_days.
  *   - For `anchored` mode:
@@ -68,8 +92,9 @@ export type Completion = {
  *       We compute `cycles = floor(elapsed/freq) + 1` so that `elapsed == freq`
  *       lands two cycles out (the current cycle end IS now — we want the NEXT).
  *
- * Throws when `frequency_days` is not a positive integer — this is a defence
- * in depth alongside the zod `.int().min(1)` at the schema layer.
+ * Throws when `frequency_days` is not null and not a positive integer — this
+ * is a defence in depth alongside the zod `.int().min(1).nullable()` at the
+ * schema layer. Null is allowed (OOFT path).
  *
  * Parameters:
  *   @param task             The task record (non-null, member-gated).
@@ -91,6 +116,18 @@ export type Completion = {
  *                           we fall through to the natural branch rather
  *                           than leaving the task "perma-snoozed" past a
  *                           real completion.
+ *   @param timezone         Optional (Phase 11 A2 resolution — Option A).
+ *                           IANA timezone name (e.g. 'Australia/Perth')
+ *                           used by the seasonal branches to extract the
+ *                           current month in home tz AND to anchor the
+ *                           wake-up date to home-tz midnight. Default
+ *                           `undefined` → UTC-month fallback per Pitfall 4
+ *                           (close enough for v1.1; month boundaries in
+ *                           non-UTC tz differ by at most 1 day). Phase 10
+ *                           call-sites that omit this param preserve
+ *                           byte-identical behavior (D-26 zero-churn).
+ *                           Phase 12 reserves the 6th `smoothed?` slot;
+ *                           no further signature churn expected in v1.1.
  *
  * Override `consumed_at` interpretation (A2 from Plan 10-01): PB 0.37.1 may
  * return `null`, `''`, or `undefined` for a fresh row with no consumed_at
@@ -101,20 +138,21 @@ export function computeNextDue(
   lastCompletion: Completion | null,
   now: Date,
   override?: Override,
+  timezone?: string,
 ): Date | null {
   if (task.archived) return null;
 
-  if (
-    task.frequency_days === null ||
-    !Number.isInteger(task.frequency_days) ||
-    task.frequency_days < 1
-  ) {
-    throw new Error(`Invalid frequency_days: ${task.frequency_days}`);
+  // Phase 11 (D-05): frequency validation gated on non-null. OOFT tasks
+  // (frequency_days === null) skip the positive-integer guard and reach
+  // the OOFT branch below.
+  if (task.frequency_days !== null) {
+    if (
+      !Number.isInteger(task.frequency_days) ||
+      task.frequency_days < 1
+    ) {
+      throw new Error(`Invalid frequency_days: ${task.frequency_days}`);
+    }
   }
-  // After the guard, TypeScript narrows `task.frequency_days` to `number`
-  // only in the expression immediately following — bind once to a local
-  // so cycle + anchored branches can reference it without re-narrowing.
-  const freq: number = task.frequency_days;
 
   // ─── Phase 10 override branch (D-06, D-10 read-time filter) ─────────
   // Override wins when:
@@ -130,8 +168,13 @@ export function computeNextDue(
   // leave the task "perma-snoozed" forever — user would complete
   // daily and still see it as "due next month". NEVER do that.
   //
+  // Phase 11 D-17: override precedence beats seasonal dormancy. The
+  // override branch intentionally runs BEFORE the seasonal-dormant
+  // branch below — if a user snoozes a dormant-seasonal task (rare
+  // edge), user intent wins.
+  //
   // Phase 12 will insert the `next_due_smoothed` branch BETWEEN this
-  // override branch and the cycle/anchored branches (D-07
+  // override branch and the seasonal/OOFT/cycle branches (D-07
   // forward-compatibility).
   if (override && !override.consumed_at) {
     const snoozeUntil = new Date(override.snooze_until);
@@ -143,6 +186,78 @@ export function computeNextDue(
     }
     // else: stale override; fall through to cycle/anchored natural branch.
   }
+
+  // ─── Phase 11 seasonal branches (D-12) ──────────────────────────────
+  // hasWindow = task is seasonal. Precompute the "prior-season" state
+  // once — both the dormant and wake-up branches need it:
+  //   - prior-season + dormant-month  → wake-up (return next from-open)
+  //   - prior-season + in-window-now  → wake-up (return next from-open)
+  //   - same-season + dormant-month   → dormant (return null)
+  //   - same-season + in-window-now   → fall through to cycle branch
+  //
+  // Prior-season means "the last completion was in a different active
+  // season instance than the current one" — either via wasInPriorSeason's
+  // dormant-month short-circuit, via the A3 365-day heuristic, or via
+  // no completion at all (first cycle is definitionally prior-season).
+  const hasWindow =
+    task.active_from_month != null && task.active_to_month != null;
+  const nowMonth = timezone
+    ? toZonedTime(now, timezone).getMonth() + 1
+    : now.getUTCMonth() + 1;
+
+  if (hasWindow) {
+    const lastInPriorSeason = lastCompletion
+      ? wasInPriorSeason(
+          new Date(lastCompletion.completed_at),
+          task.active_from_month!,
+          task.active_to_month!,
+          now,
+          timezone,
+        )
+      : true; // no completion = treat as prior season (first cycle)
+
+    // Seasonal-dormant (SEAS-02): only fires when the task was recently
+    // active in the SAME season and now drifted out-of-window. A
+    // prior-season completion indicates a wake-up, not dormancy — user
+    // should see the next open date, not null.
+    const inWindowNow = isInActiveWindow(
+      nowMonth,
+      task.active_from_month!,
+      task.active_to_month!,
+    );
+    if (!inWindowNow && !lastInPriorSeason) {
+      // Same-season dormant — task is sleeping mid-cycle.
+      return null;
+    }
+
+    // Seasonal-wakeup (SEAS-03): prior-season (or first-cycle) →
+    // anchor to start-of-window in home tz, regardless of whether
+    // now is currently in-window (the caller still wants a concrete
+    // wake-up date to render in Phase 14/15 UI).
+    if (lastInPriorSeason) {
+      return nextWindowOpenDate(
+        now,
+        task.active_from_month!,
+        task.active_to_month!,
+        timezone ?? 'UTC',
+      );
+    }
+    // else: same-season in-window → fall through to cycle/anchored.
+  }
+
+  // ─── Phase 11 OOFT branch (D-05, OOFT-05) ───────────────────────────
+  // frequency_days === null → one-off task. Return due_date if no
+  // completion, null otherwise (completed OOFT is archived by
+  // completeTaskAction's batch, but race-safety returns null).
+  if (task.frequency_days === null) {
+    if (lastCompletion) return null;
+    return task.due_date ? new Date(task.due_date) : null;
+  }
+  // After the OOFT short-circuit, TypeScript still sees frequency_days
+  // as `number | null` across branches (flow analysis can't carry the
+  // null-guard through the intervening seasonal branches). Bind a local
+  // so cycle + anchored branches can reference a narrowed `number`.
+  const freq: number = task.frequency_days;
 
   if (task.schedule_mode === 'cycle') {
     const baseIso = lastCompletion?.completed_at ?? task.created;
@@ -269,4 +384,40 @@ export function nextWindowOpenDate(
     Date.UTC(targetYear, from - 1, 1, 0, 0, 0, 0),
   );
   return fromZonedTime(localMidnight, timezone);
+}
+
+/**
+ * Phase 11 (D-12, A3 365-day heuristic): determine if a seasonal task's
+ * last completion falls in a PRIOR active season relative to `now`.
+ *
+ * Heuristic:
+ *   - If lastCompletedAt's month (in home tz) is out-of-window, TRUE —
+ *     the completion was during a dormant month, so any new season
+ *     opening will be a different "season instance."
+ *   - If in-window, check elapsed days: more than 365 means at least
+ *     one full dormancy gap has passed, so TRUE. Shorter in-window
+ *     gaps assume same-season continuation and the cycle branch
+ *     handles the step.
+ *
+ * This is A3 from the research Assumptions Log — acceptable for v1.1.
+ * A future precise implementation walks month-by-month looking for a
+ * dormancy transition (correct but slower; deferred).
+ *
+ * Private (not exported): consumed only by computeNextDue's seasonal-
+ * wakeup branch. Exposing it would require documenting the heuristic
+ * contract publicly; keep private until a second caller needs it.
+ */
+function wasInPriorSeason(
+  lastCompletedAt: Date,
+  from: number,
+  to: number,
+  now: Date,
+  timezone: string | undefined,
+): boolean {
+  const lastMonth = timezone
+    ? toZonedTime(lastCompletedAt, timezone).getMonth() + 1
+    : lastCompletedAt.getUTCMonth() + 1;
+  if (!isInActiveWindow(lastMonth, from, to)) return true;
+  const daysSince = (now.getTime() - lastCompletedAt.getTime()) / 86400000;
+  return daysSince > 365;
 }
