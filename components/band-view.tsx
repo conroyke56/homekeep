@@ -295,9 +295,21 @@ export function BandView({
       effective?: EffectiveAssignee;
     };
   };
-  const overdueWithName = bands.overdue.map(attachMeta);
-  const thisWeekWithName = bands.thisWeek.map(attachMeta);
-  const horizonWithName = bands.horizon.map(attachMeta);
+  // Phase 11 (WR-03): OOFT tasks (frequency_days null, or 0 per the PB
+  // 0.37.1 cleared-NumberField storage quirk) survive computeTaskBands
+  // via computeNextDue's OOFT branch returning due_date. The band
+  // children (TaskBand, TaskRow) render "Every N days" from
+  // frequency_days, which is nonsensical for OOFTs. Phase 15 owns the
+  // OOFT UI (dedicated "Once" label + OOFT-shape handling per CONTEXT.md);
+  // until then filter OOFTs out of the band view so task-band never
+  // casts a null/0 frequency to number. Matches the isDormant filter
+  // in computeCoverage — both exclude tasks that don't belong in the
+  // recurring-cycle rendering path.
+  const filterOutOoft = (ct: ClassifiedTask) =>
+    ct.frequency_days !== null && ct.frequency_days !== 0;
+  const overdueWithName = bands.overdue.filter(filterOutOoft).map(attachMeta);
+  const thisWeekWithName = bands.thisWeek.filter(filterOutOoft).map(attachMeta);
+  const horizonWithName = bands.horizon.filter(filterOutOoft).map(attachMeta);
 
   // 06-03 GAME-05: surface the SINGLE most-overdue task on the dashboard.
   // bands.overdue is already sorted most-negative-daysDelta first, so the
