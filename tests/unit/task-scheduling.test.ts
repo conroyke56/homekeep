@@ -1,6 +1,10 @@
 import { describe, test, expect } from 'vitest';
 import { addDays } from 'date-fns';
 import { computeNextDue, type Task } from '@/lib/task-scheduling';
+import {
+  computeHouseholdLoad,
+  placeNextDue,
+} from '@/lib/load-smoothing';
 import type { Override } from '@/lib/schedule-overrides';
 
 /**
@@ -677,5 +681,400 @@ describe('computeNextDue — branch composition (D-16, D-17)', () => {
       'UTC',
     );
     expect(result).toBeNull();
+  });
+});
+
+describe('branch composition matrix — LOAD-15 hard gate', () => {
+  // Fixed reference point — 2026-05-01 UTC is a Friday.
+  // (Verified by Plan 12-01 SUMMARY — prompt's original "Thursday" anchor
+  // was corrected after NOW.getUTCDay() === 5 in Wave 1 test fixtures.)
+  // This phase's anchor re-verifies: 2026-01-01 is Thu; Apr 30 is +119
+  // → (119-1)%7=6 → Wed; May 1 = Fri. ✓
+  const NOW = new Date('2026-05-01T00:00:00.000Z');
+  const TZ = 'UTC';
+
+  // Fixture builder — all Phase 11+12 fields pre-populated with null
+  // defaults so test intent (which field matters) is explicit.
+  function makeBranchTask(overrides: Partial<Task> = {}): Task {
+    return {
+      id: 't1',
+      created: '2026-04-01T00:00:00.000Z',
+      archived: false,
+      frequency_days: 7,
+      schedule_mode: 'cycle',
+      anchor_date: null,
+      due_date: null,
+      preferred_days: null,
+      active_from_month: null,
+      active_to_month: null,
+      next_due_smoothed: null,
+      ...overrides,
+    };
+  }
+
+  // ─── Branch precedence axis (Cases 1-6) ──────────────────────────────
+
+  test('Case 1: archived wins over every other branch state', () => {
+    const task = makeBranchTask({
+      archived: true,
+      next_due_smoothed: '2026-05-15T00:00:00.000Z',
+      due_date: '2026-05-20T00:00:00.000Z',
+      frequency_days: null,
+    });
+    const override: Override = {
+      id: 'o1',
+      task_id: 't1',
+      snooze_until: '2026-05-10T00:00:00.000Z',
+      consumed_at: null,
+      created_by_id: 'u1',
+      created: '2026-04-15T00:00:00.000Z',
+    };
+    expect(computeNextDue(task, null, NOW, override, TZ)).toBeNull();
+  });
+
+  test('Case 2: override wins over smoothed', () => {
+    const task = makeBranchTask({
+      next_due_smoothed: '2026-05-15T00:00:00.000Z',
+    });
+    const override: Override = {
+      id: 'o1',
+      task_id: 't1',
+      snooze_until: '2026-05-20T00:00:00.000Z',
+      consumed_at: null,
+      created_by_id: 'u1',
+      created: '2026-04-15T00:00:00.000Z',
+    };
+    const result = computeNextDue(task, null, NOW, override, TZ);
+    expect(result?.toISOString()).toBe('2026-05-20T00:00:00.000Z');
+  });
+
+  test('Case 3: smoothed wins over seasonal-dormant (same-season)', () => {
+    // In-window now (May in Apr-Sep window), in-window completion,
+    // next_due_smoothed set → lastInPriorSeason=false → smoothed returns.
+    const task = makeBranchTask({
+      active_from_month: 4,
+      active_to_month: 9,
+      next_due_smoothed: '2026-05-15T00:00:00.000Z',
+    });
+    const completion = { completed_at: '2026-04-20T00:00:00.000Z' };
+    const result = computeNextDue(task, completion, NOW, undefined, TZ);
+    expect(result?.toISOString()).toBe('2026-05-15T00:00:00.000Z');
+  });
+
+  test('Case 4: seasonal-wakeup wins over smoothed (prior-season)', () => {
+    // Oct-Mar window, no completion (first cycle = prior-season), stale
+    // smoothed IGNORED — wake-up anchors to Oct 1 of this year (nowMonth
+    // 5 < from 10 → same calendar year).
+    const task = makeBranchTask({
+      active_from_month: 10,
+      active_to_month: 3,
+      next_due_smoothed: '2026-05-15T00:00:00.000Z',
+    });
+    const result = computeNextDue(task, null, NOW, undefined, TZ);
+    expect(result?.toISOString()).toBe('2026-10-01T00:00:00.000Z');
+  });
+
+  test('Case 5: seasonal-dormant wins over OOFT', () => {
+    // OOFT (freq=null) + seasonal window Oct-Mar + in-season (Jan)
+    // completion + out-of-window now (July) → same-season dormant → null.
+    const task = makeBranchTask({
+      frequency_days: null,
+      due_date: '2026-07-20T00:00:00.000Z',
+      active_from_month: 10,
+      active_to_month: 3,
+    });
+    const completion = { completed_at: '2026-01-10T00:00:00.000Z' };
+    const july = new Date('2026-07-15T12:00:00.000Z');
+    expect(computeNextDue(task, completion, july, undefined, TZ)).toBeNull();
+  });
+
+  test('Case 6: OOFT wins over cycle-natural', () => {
+    const task = makeBranchTask({
+      frequency_days: null,
+      due_date: '2026-06-01T00:00:00.000Z',
+    });
+    const result = computeNextDue(task, null, NOW, undefined, TZ);
+    expect(result?.toISOString()).toBe('2026-06-01T00:00:00.000Z');
+  });
+
+  // ─── Interaction axis (Cases 7-21) ───────────────────────────────────
+
+  test('Case 7: override × smoothed × seasonal-dormant — override wins', () => {
+    // Active override beats both smoothed AND dormant-seasonal (D-17).
+    const task = makeBranchTask({
+      next_due_smoothed: '2026-05-15T00:00:00.000Z',
+      active_from_month: 10,
+      active_to_month: 3,
+    });
+    const completion = { completed_at: '2026-01-10T00:00:00.000Z' };
+    const override: Override = {
+      id: 'o1',
+      task_id: 't1',
+      snooze_until: '2026-08-05T00:00:00.000Z',
+      consumed_at: null,
+      created_by_id: 'u1',
+      created: '2026-07-20T00:00:00.000Z',
+    };
+    const july = new Date('2026-07-15T12:00:00.000Z');
+    const result = computeNextDue(task, completion, july, override, TZ);
+    expect(result?.toISOString()).toBe('2026-08-05T00:00:00.000Z');
+  });
+
+  test('Case 8: override × OOFT — override wins', () => {
+    const task = makeBranchTask({
+      frequency_days: null,
+      due_date: '2026-06-01T00:00:00.000Z',
+    });
+    const override: Override = {
+      id: 'o1',
+      task_id: 't1',
+      snooze_until: '2026-06-10T00:00:00.000Z',
+      consumed_at: null,
+      created_by_id: 'u1',
+      created: '2026-05-15T00:00:00.000Z',
+    };
+    const result = computeNextDue(task, null, NOW, override, TZ);
+    expect(result?.toISOString()).toBe('2026-06-10T00:00:00.000Z');
+  });
+
+  test('Case 9: smoothed × anchored (LOAD-06 bypass) — anchored wins', () => {
+    // anchored + stale next_due_smoothed + anchor in past
+    // → returns natural anchored date, NOT smoothed.
+    // elapsed = May 1 − Jan 15 = 106 days. floor(106/30)+1 = 4 cycles.
+    // Jan 15 + 4*30d = Jan 15 + 120d = May 15.
+    const task = makeBranchTask({
+      schedule_mode: 'anchored',
+      anchor_date: '2026-01-15T00:00:00.000Z',
+      frequency_days: 30,
+      next_due_smoothed: '2026-05-20T00:00:00.000Z', // stale — must be ignored
+    });
+    const result = computeNextDue(task, null, NOW, undefined, TZ);
+    expect(result?.toISOString()).toBe('2026-05-15T00:00:00.000Z');
+    // Sanity: the smoothed date (May 20) is NOT what came back.
+    expect(result?.toISOString()).not.toBe('2026-05-20T00:00:00.000Z');
+  });
+
+  test('Case 10: smoothed × PREF read-side (smoothed date falls on weekend)', () => {
+    // 2026-05-09 is a Saturday. The smoother (Plan 12-01 T5) picks weekend
+    // dates when preferred_days='weekend' on the WRITE side; this test
+    // asserts the READ side returns the stored smoothed date verbatim.
+    const task = makeBranchTask({
+      preferred_days: 'weekend',
+      next_due_smoothed: '2026-05-09T00:00:00.000Z',
+    });
+    const result = computeNextDue(task, null, NOW, undefined, TZ);
+    expect(result?.toISOString()).toBe('2026-05-09T00:00:00.000Z');
+    expect(result?.getUTCDay()).toBe(6); // Saturday
+  });
+
+  test('Case 11: smoothed × seasonal-wakeup first cycle — wakeup wins', () => {
+    // Jun-Sep window, no completion → first cycle = prior-season.
+    // Stale smoothed must be ignored; wake-up anchors to Jun 1 this year.
+    const task = makeBranchTask({
+      active_from_month: 6,
+      active_to_month: 9,
+      next_due_smoothed: '2026-05-15T00:00:00.000Z',
+    });
+    const result = computeNextDue(task, null, NOW, undefined, TZ);
+    expect(result?.toISOString()).toBe('2026-06-01T00:00:00.000Z');
+  });
+
+  test('Case 12: smoothed × cycle-natural (v1.0 holdover NULL) — natural wins', () => {
+    // cycle task + next_due_smoothed null (v1.0 row) + completion.
+    // Apr 20 + 14d = May 4.
+    const task = makeBranchTask({
+      frequency_days: 14,
+      next_due_smoothed: null,
+    });
+    const completion = { completed_at: '2026-04-20T00:00:00.000Z' };
+    const result = computeNextDue(task, completion, NOW, undefined, TZ);
+    expect(result?.toISOString()).toBe('2026-05-04T00:00:00.000Z');
+  });
+
+  test('Case 13: OOFT × archived (post-completion) — null', () => {
+    const task = makeBranchTask({
+      frequency_days: null,
+      due_date: '2026-06-01T00:00:00.000Z',
+      archived: true,
+    });
+    const completion = { completed_at: '2026-04-20T00:00:00.000Z' };
+    expect(computeNextDue(task, completion, NOW, undefined, TZ)).toBeNull();
+  });
+
+  test('Case 14: OOFT contributes to load map but own smoothed stays null', () => {
+    // computeHouseholdLoad includes OOFT's due_date.
+    // placeNextDue called on OOFT throws (defense-in-depth from Plan 12-01).
+    const ooft = makeBranchTask({
+      id: 'ooft1',
+      frequency_days: null,
+      due_date: '2026-05-15T00:00:00.000Z',
+    });
+    const load = computeHouseholdLoad([ooft], new Map(), new Map(), NOW, 120, TZ);
+    expect(load.get('2026-05-15')).toBe(1);
+    // placeNextDue on OOFT throws per LOAD-09 defense-in-depth:
+    expect(() => placeNextDue(ooft, null, load, NOW, { timezone: TZ })).toThrow(
+      /LOAD-09/,
+    );
+  });
+
+  test('Case 15: snoozed task contributes snooze_until to load map (LOAD-08)', () => {
+    const task = makeBranchTask({ id: 'snoozed', frequency_days: 30 });
+    const override: Override = {
+      id: 'o1',
+      task_id: 'snoozed',
+      snooze_until: '2026-05-20T00:00:00.000Z',
+      consumed_at: null,
+      created_by_id: 'u1',
+      created: '2026-04-15T00:00:00.000Z',
+    };
+    const overridesByTask = new Map<string, Override>([['snoozed', override]]);
+    const load = computeHouseholdLoad(
+      [task],
+      new Map(),
+      overridesByTask,
+      NOW,
+      120,
+      TZ,
+    );
+    expect(load.get('2026-05-20')).toBe(1);
+  });
+
+  test('Case 16: anchored contributes natural date to load map (not smoothed)', () => {
+    // anchored w/ stale smoothed; load map uses natural anchored date.
+    // Same anchored arithmetic as Case 9 → May 15.
+    const anchored = makeBranchTask({
+      id: 'anch1',
+      schedule_mode: 'anchored',
+      anchor_date: '2026-01-15T00:00:00.000Z',
+      frequency_days: 30,
+      next_due_smoothed: '2026-05-20T00:00:00.000Z', // stale — must be ignored
+    });
+    const load = computeHouseholdLoad(
+      [anchored],
+      new Map(),
+      new Map(),
+      NOW,
+      120,
+      TZ,
+    );
+    expect(load.get('2026-05-15')).toBe(1);
+    expect(load.get('2026-05-20')).toBeUndefined();
+  });
+
+  test('Case 17: post-completion — smoothed written via placement round-trips on read', () => {
+    // Simulates Wave 3 batch: pre-completion smoothed is null; post
+    // placement, smoothed = placedDate.toISOString(). Wave 2 read-side
+    // picks up the freshly written date.
+    const task = makeBranchTask({
+      id: 't17',
+      frequency_days: 7,
+      next_due_smoothed: null,
+    });
+    const completion = { completed_at: '2026-04-30T00:00:00.000Z' };
+    const load = new Map<string, number>();
+    const placed = placeNextDue(task, completion, load, NOW, { timezone: TZ });
+    // Natural ideal = Apr 30 + 7 = May 7. Empty load, no PREF → May 7.
+    expect(placed.toISOString()).toBe('2026-05-07T00:00:00.000Z');
+
+    // Simulate the batch write — spread a local copy for the read-side.
+    const afterTask: Task = {
+      ...task,
+      next_due_smoothed: placed.toISOString(),
+    };
+    const read = computeNextDue(afterTask, completion, NOW, undefined, TZ);
+    expect(read?.toISOString()).toBe(placed.toISOString());
+
+    // Pre-completion read (stale task, smoothed still null) falls through
+    // to natural cadence via the null-check in the smoothed branch:
+    const pre = computeNextDue(task, completion, NOW, undefined, TZ);
+    expect(pre?.toISOString()).toBe('2026-05-07T00:00:00.000Z');
+  });
+
+  test('Case 18: anchored bypass still contributes — map reflects anchored + cycle dates independently', () => {
+    // Two tasks: anchored (bypass smoothing) + cycle (uses smoothed).
+    // Load map must have BOTH dates, one for each task's contribution.
+    const anchored = makeBranchTask({
+      id: 'anch',
+      schedule_mode: 'anchored',
+      anchor_date: '2026-01-15T00:00:00.000Z',
+      frequency_days: 30,
+    });
+    const cycle = makeBranchTask({
+      id: 'cyc',
+      frequency_days: 7,
+      next_due_smoothed: '2026-05-09T00:00:00.000Z',
+    });
+    const load = computeHouseholdLoad(
+      [anchored, cycle],
+      new Map(),
+      new Map(),
+      NOW,
+      120,
+      TZ,
+    );
+    expect(load.get('2026-05-15')).toBe(1); // anchored natural
+    expect(load.get('2026-05-09')).toBe(1); // cycle smoothed (Wave 2 reads it)
+  });
+
+  test('Case 19: seasonal-wakeup × anchored × PREF — seasonal wake-up fires (no smoothing, no PREF narrow)', () => {
+    // Anchored + seasonal window Jun-Sep + preferred_days='weekend' all set.
+    // The anchored-bypass guard skips the smoothed branch; the seasonal
+    // branches STILL fire (they run after smoothed, regardless of mode),
+    // and wake-up anchors to Jun 1 because no completion = prior-season.
+    // Anchored "byte-identical v1.0" means no smoothing + no PREF narrowing
+    // on the anchored cycle date — but the seasonal layer is independent.
+    const task = makeBranchTask({
+      schedule_mode: 'anchored',
+      anchor_date: '2026-01-15T00:00:00.000Z',
+      frequency_days: 30,
+      active_from_month: 6,
+      active_to_month: 9,
+      preferred_days: 'weekend',
+      next_due_smoothed: '2026-05-20T00:00:00.000Z',
+    });
+    const result = computeNextDue(task, null, NOW, undefined, TZ);
+    expect(result?.toISOString()).toBe('2026-06-01T00:00:00.000Z');
+  });
+
+  test('Case 20: seasonal in-window past wake-up × smoothed — smoothed wins on second cycle', () => {
+    // Apr-Sep window + completion in same season (Apr, in-window, <365d)
+    // + in-window now (May 1) + next_due_smoothed set.
+    // lastInPriorSeason=false (same season, 11d gap), so treatAsWakeup=false
+    // → smoothed branch returns.
+    const task = makeBranchTask({
+      active_from_month: 4,
+      active_to_month: 9,
+      next_due_smoothed: '2026-05-25T00:00:00.000Z',
+    });
+    const completion = { completed_at: '2026-04-15T00:00:00.000Z' };
+    const result = computeNextDue(task, completion, NOW, undefined, TZ);
+    expect(result?.toISOString()).toBe('2026-05-25T00:00:00.000Z');
+  });
+
+  test('Case 21: empty-PREF-window widens forward to next weekend (PREF-03)', () => {
+    // Completion Apr 29 (Wed) + freq=7 → naturalIdeal = May 6 (Wed).
+    // tolerance=1 (options override) → candidates = [May 5 Tue, May 6 Wed,
+    // May 7 Thu] — no weekends. PREF-03 widens forward from
+    // naturalIdeal+tolerance=May 7:
+    //   widen=1 → May 8 (Fri) → no match
+    //   widen=2 → May 9 (Sat) → match → return May 9.
+    const task = makeBranchTask({
+      frequency_days: 7,
+      preferred_days: 'weekend',
+    });
+    const completion = { completed_at: '2026-04-29T00:00:00.000Z' };
+    const load = new Map<string, number>();
+    const result = placeNextDue(task, completion, load, NOW, {
+      tolerance: 1,
+      preferredDays: 'weekend',
+      timezone: TZ,
+    });
+    expect(result.toISOString()).toBe('2026-05-09T00:00:00.000Z');
+    expect(result.getUTCDay()).toBe(6); // Saturday
+
+    // Sanity: addDays / date-fns is used elsewhere; confirm Apr 29 was Wed.
+    const completedAt = new Date('2026-04-29T00:00:00.000Z');
+    expect(completedAt.getUTCDay()).toBe(3); // Wednesday
+    expect(addDays(completedAt, 7).getUTCDay()).toBe(3); // May 6 also Wed
   });
 });
