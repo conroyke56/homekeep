@@ -110,11 +110,14 @@ export default async function PersonPage({
     ]),
   );
 
-  // Tasks (active only).
+  // Tasks (active only). Phase 14 (SEAS-06): active_from_month +
+  // active_to_month added to the projection so PersonTaskList's
+  // classifyDormantTasks can identify dormant tasks and render the
+  // Sleeping section below HorizonStrip.
   const tasksRaw = await pb.collection('tasks').getFullList({
     filter: `home_id = "${homeId}" && archived = false`,
     fields:
-      'id,name,area_id,created,frequency_days,schedule_mode,anchor_date,archived,assigned_to_id',
+      'id,name,area_id,created,frequency_days,schedule_mode,anchor_date,archived,assigned_to_id,active_from_month,active_to_month',
   });
 
   // Filter to tasks whose effective assignee is the current user. Note:
@@ -147,6 +150,12 @@ export default async function PersonPage({
       schedule_mode:
         (t.schedule_mode as string) === 'anchored' ? 'anchored' : 'cycle',
       anchor_date: (t.anchor_date as string) || null,
+      // Phase 14 (SEAS-06): seasonal window fields — null on the Person
+      // view means "year-round", honoring the paired-or-null invariant
+      // Phase 11 locked at the zod layer. PersonTaskList reads these to
+      // classify dormants.
+      active_from_month: (t.active_from_month as number | null) ?? null,
+      active_to_month: (t.active_to_month as number | null) ?? null,
       area_id: areaId,
       effective,
     });

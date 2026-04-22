@@ -12,7 +12,9 @@ import {
   computeAreaCounts,
 } from '@/lib/area-coverage';
 import { AreaCard } from '@/components/area-card';
+import { DormantTaskRow } from '@/components/dormant-task-row';
 import type { Task } from '@/lib/task-scheduling';
+import { classifyDormantTasks } from '@/lib/seasonal-rendering';
 import { getActiveOverridesForHome } from '@/lib/schedule-overrides';
 
 /**
@@ -69,7 +71,7 @@ export default async function ByAreaPage({
   const tasksRaw = await pb.collection('tasks').getFullList({
     filter: `home_id = "${homeId}" && archived = false`,
     fields:
-      'id,name,area_id,created,frequency_days,schedule_mode,anchor_date,archived',
+      'id,name,area_id,created,frequency_days,schedule_mode,anchor_date,archived,active_from_month,active_to_month',
   });
 
   const now = new Date();
@@ -99,6 +101,12 @@ export default async function ByAreaPage({
       schedule_mode:
         (t.schedule_mode as string) === 'anchored' ? 'anchored' : 'cycle',
       anchor_date: (t.anchor_date as string) || null,
+      // Phase 14 (SEAS-06): seasonal window fields. null = year-round;
+      // paired ints = dormant outside [from..to] per SEAS-02. Surfaces
+      // below (the home-level Sleeping rollup) classify these via
+      // classifyDormantTasks.
+      active_from_month: (t.active_from_month as number | null) ?? null,
+      active_to_month: (t.active_to_month as number | null) ?? null,
     });
   }
 
@@ -130,6 +138,36 @@ export default async function ByAreaPage({
 
   const whole = cards.find((c) => c.area.is_whole_home_system);
   const rest = cards.filter((c) => !c.area.is_whole_home_system);
+
+  // Phase 14 (SEAS-06): home-level dormant rollup below the per-area
+  // cards. Classifies every task (year-round filtered out by
+  // classifyDormantTasks) and renders the Sleeping section with each
+  // task's area name for at-a-glance visibility of out-of-season work.
+  //
+  // The per-area AreaCard aggregates (coverage + counts) already
+  // exclude dormants via Phase 11 SEAS-05 (computeCoverage's dormant
+  // filter); this section is purely informational — dormant tasks
+  // never contribute to coverage numbers.
+  const areaNameById = new Map<string, string>(
+    areas.map((a) => [a.id as string, a.name as string]),
+  );
+  const allTasksForDormant: Array<Task & { name: string; area_name?: string }> =
+    tasksRaw.map((t) => ({
+      id: t.id as string,
+      name: t.name as string,
+      area_name: areaNameById.get(t.area_id as string),
+      created: t.created as string,
+      archived: Boolean(t.archived),
+      frequency_days: t.frequency_days as number | null,
+      schedule_mode:
+        (t.schedule_mode as string) === 'anchored'
+          ? ('anchored' as const)
+          : ('cycle' as const),
+      anchor_date: (t.anchor_date as string) || null,
+      active_from_month: (t.active_from_month as number | null) ?? null,
+      active_to_month: (t.active_to_month as number | null) ?? null,
+    }));
+  const dormant = classifyDormantTasks(allTasksForDormant, now, timezone);
 
   return (
     <div
@@ -174,6 +212,36 @@ export default async function ByAreaPage({
             />
           ))}
         </div>
+      )}
+
+      {/* Phase 14 (SEAS-06): home-level Sleeping rollup. Only renders
+          when at least one dormant task exists — zero added DOM for
+          homes with no seasonal tasks. Each row shows the task name,
+          its area, and a "Sleeps until <MMM yyyy>" badge. */}
+      {dormant.length > 0 && (
+        <section
+          data-dormant-section
+          data-dormant-count={dormant.length}
+          className="space-y-2 pt-6"
+        >
+          <h2 className="text-lg font-medium text-muted-foreground">
+            Sleeping
+          </h2>
+          <div className="space-y-2">
+            {dormant.map((t) => (
+              <DormantTaskRow
+                key={t.id}
+                task={{
+                  id: t.id,
+                  name: t.name,
+                  area_name: t.area_name,
+                  nextOpenDate: t.nextOpenDate,
+                }}
+                timezone={timezone}
+              />
+            ))}
+          </div>
+        </section>
       )}
     </div>
   );

@@ -17,6 +17,8 @@ import {
 import { completeTaskAction } from '@/lib/actions/completions';
 import { TaskBand } from '@/components/task-band';
 import { HorizonStrip } from '@/components/horizon-strip';
+import { DormantTaskRow } from '@/components/dormant-task-row';
+import { classifyDormantTasks } from '@/lib/seasonal-rendering';
 import {
   EarlyCompletionDialog,
   type GuardState,
@@ -175,10 +177,23 @@ export function PersonTaskList({
   const thisWeekWithName = bands.thisWeek.map(attachMeta);
   const horizonWithName = bands.horizon.map(attachMeta);
 
+  // Phase 14 (SEAS-06, D-07..D-09): dormant-task classification for the
+  // Person view. Same pattern as BandView — parallels the band pipeline
+  // and renders below HorizonStrip when dormant tasks exist. `tasks`
+  // here is already scoped to the current user (the page pre-filters
+  // to effective-assignee-is-me), so dormant tasks surface only for
+  // the person who owns them.
+  const dormant = classifyDormantTasks(tasks, nowDate, timezone);
+
+  // `noBandsRendered` is the "all my stuff is mid-cycle" empty-state
+  // trigger. A user who owns only dormant tasks should NOT see the
+  // empty-state card — they'll see the Sleeping section instead. Hence
+  // `dormant.length === 0` is part of the predicate.
   const noBandsRendered =
     overdueWithName.length === 0 &&
     thisWeekWithName.length === 0 &&
-    horizonWithName.length === 0;
+    horizonWithName.length === 0 &&
+    dormant.length === 0;
 
   return (
     <div
@@ -217,6 +232,33 @@ export function PersonTaskList({
             now={nowDate}
             timezone={timezone}
           />
+          {/* Phase 14 (SEAS-06): Sleeping section — mirrors BandView's
+              placement below HorizonStrip. Zero-added-DOM when no
+              dormant tasks exist. */}
+          {dormant.length > 0 && (
+            <section
+              data-dormant-section
+              data-dormant-count={dormant.length}
+              className="space-y-2"
+            >
+              <h3 className="text-sm font-medium text-muted-foreground">
+                Sleeping
+              </h3>
+              <div className="space-y-2">
+                {dormant.map((t) => (
+                  <DormantTaskRow
+                    key={t.id}
+                    task={{
+                      id: t.id,
+                      name: t.name,
+                      nextOpenDate: t.nextOpenDate,
+                    }}
+                    timezone={timezone}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
         </>
       )}
 

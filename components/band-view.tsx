@@ -27,6 +27,8 @@ import {
 import { TaskDetailSheet } from '@/components/task-detail-sheet';
 import { AreaCelebration } from '@/components/area-celebration';
 import { MostNeglectedCard } from '@/components/most-neglected-card';
+import { DormantTaskRow } from '@/components/dormant-task-row';
+import { classifyDormantTasks } from '@/lib/seasonal-rendering';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -311,6 +313,16 @@ export function BandView({
   const thisWeekWithName = bands.thisWeek.filter(filterOutOoft).map(attachMeta);
   const horizonWithName = bands.horizon.filter(filterOutOoft).map(attachMeta);
 
+  // Phase 14 (SEAS-06, D-07..D-09): dormant-task classification parallels
+  // the band path. computeTaskBands silently skips tasks whose
+  // computeNextDue returned null (seasonal-dormant per SEAS-02), so the
+  // dormant read path is entirely separate from the bands pipeline above.
+  // Archived tasks are also excluded (defense-in-depth; classifyDormantTasks
+  // enforces the archived=false guard itself). Coverage is already
+  // dormant-filtered upstream (Phase 11 SEAS-05) — the rendered Sleeping
+  // section below is purely informational.
+  const dormant = classifyDormantTasks(tasks, nowDate, timezone);
+
   // 06-03 GAME-05: surface the SINGLE most-overdue task on the dashboard.
   // bands.overdue is already sorted most-negative-daysDelta first, so the
   // head of the array IS the most-overdue. Only render when at least one
@@ -402,6 +414,39 @@ export function BandView({
             now={nowDate}
             timezone={timezone}
           />
+          {/* Phase 14 (SEAS-06): Sleeping section — rendered only when at
+              least one dormant task exists. Dormant rows carry their
+              own opacity-50 + "Sleeps until" badge + inert click
+              handler via <DormantTaskRow/>. The section disappears
+              entirely when `dormant.length === 0` so the render order
+              Overdue → MostNeglected → ThisWeek → HorizonStrip is
+              byte-identical to the Phase 13 baseline for homes without
+              any seasonal tasks. */}
+          {dormant.length > 0 && (
+            <section
+              data-dormant-section
+              data-dormant-count={dormant.length}
+              className="space-y-2"
+            >
+              <h3 className="text-sm font-medium text-muted-foreground">
+                Sleeping
+              </h3>
+              <div className="space-y-2">
+                {dormant.map((t) => (
+                  <DormantTaskRow
+                    key={t.id}
+                    task={{
+                      id: t.id,
+                      name: t.name,
+                      area_name: t.area_name,
+                      nextOpenDate: t.nextOpenDate,
+                    }}
+                    timezone={timezone}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
         </>
       )}
 
