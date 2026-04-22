@@ -65,6 +65,10 @@ export async function createTask(
   const rawFreq = Number(formData.get('frequency_days') ?? 0);
   const rawMode = String(formData.get('schedule_mode') ?? 'cycle').trim();
   const rawAssigned = String(formData.get('assigned_to_id') ?? '').trim();
+  // Phase 13 Plan 13-02 (TCSEM-01, TCSEM-02): read the Advanced
+  // collapsible's "Last done" field. Empty string → null (schema
+  // tolerates both via z.string().nullable().optional()).
+  const rawLastDone = String(formData.get('last_done') ?? '').trim();
 
   const raw = {
     home_id: String(formData.get('home_id') ?? '').trim(),
@@ -85,6 +89,10 @@ export async function createTask(
     // the client forged a non-member id, the rule rejects the write.
     assigned_to_id: rawAssigned.length > 0 ? rawAssigned : null,
     notes: rawNotes,
+    // Phase 13 Plan 13-02 (TCSEM-01, TCSEM-02): empty string → null so
+    // the smart-default path (TCSEM-03) takes over. Non-empty ISO date
+    // string routes to the last_done + freq placement branch.
+    last_done: rawLastDone.length > 0 ? rawLastDone : null,
   };
 
   const parsed = taskSchema.safeParse(raw);
@@ -175,14 +183,29 @@ export async function createTask(
           home.timezone as string,
         );
 
-        // TCSEM-02/TCSEM-03: derive first_ideal. last_done is absent
-        // in the Wave 1 form schema (Plan 13-02 adds it); Wave 1 calls
-        // computeFirstIdealDate with lastDone=null — smart-default
-        // kicks in per TCSEM-03.
+        // TCSEM-02/TCSEM-03: derive first_ideal. Plan 13-02 Wave 2 now
+        // threads the Advanced collapsible's "Last done" field through.
+        // When the user supplies an explicit last_done, we route to the
+        // TCSEM-02 branch (firstIdeal = last_done + freq). Otherwise we
+        // pass null and TCSEM-03 smart-default picks the bucket.
+        //
+        // CRITICAL (Wave 1 handoff note preserved): we do NOT short-
+        // circuit by passing lastDone directly as placeNextDue's
+        // lastCompletion arg. computeFirstIdealDate always computes
+        // firstIdeal first; the synthetic-lastCompletion bridge below
+        // then reverses placeNextDue's internal naturalIdeal math so
+        // placed = firstIdeal + tolerance-window adjustment. Short-
+        // circuiting would skip the smart-default path for blank
+        // last_done.
+        const lastDoneDate: Date | null =
+          typeof parsed.data.last_done === 'string' &&
+          parsed.data.last_done.length > 0
+            ? new Date(parsed.data.last_done)
+            : null;
         const firstIdeal = computeFirstIdealDate(
           parsed.data.schedule_mode,
           parsed.data.frequency_days,
-          null, // Plan 13-02 wires the form's last_done field here.
+          lastDoneDate,
           now,
         );
 
@@ -276,6 +299,11 @@ export async function updateTask(
   const rawFreq = Number(formData.get('frequency_days') ?? 0);
   const rawMode = String(formData.get('schedule_mode') ?? 'cycle').trim();
   const rawAssigned = String(formData.get('assigned_to_id') ?? '').trim();
+  // Phase 13 Plan 13-02: accept last_done on updateTask's raw parse so
+  // forms that include the field don't trip the schema — but DO NOT
+  // consume it. D-07 scope is task CREATION only; updateTask leaves
+  // next_due_smoothed untouched (edit-time re-placement is Phase 15+).
+  const rawLastDone = String(formData.get('last_done') ?? '').trim();
 
   const raw = {
     home_id: String(formData.get('home_id') ?? '').trim(),
@@ -293,6 +321,7 @@ export async function updateTask(
     // validation enforces the assignee must be a valid user id.
     assigned_to_id: rawAssigned.length > 0 ? rawAssigned : null,
     notes: rawNotes,
+    last_done: rawLastDone.length > 0 ? rawLastDone : null,
   };
 
   const parsed = taskSchema.safeParse(raw);

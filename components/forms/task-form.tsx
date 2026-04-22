@@ -8,6 +8,11 @@ import { taskSchema, type TaskInput } from '@/lib/schemas/task';
 import type { ActionState } from '@/lib/schemas/auth';
 import { createTask, updateTask } from '@/lib/actions/tasks';
 import { Button } from '@/components/ui/button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -51,6 +56,11 @@ type TaskRecord = {
   anchor_date: string | null;
   notes?: string;
   assigned_to_id?: string | null;
+  // Phase 13 Plan 13-02 (TCSEM-01): optional last-done date surfaced
+  // through the Advanced collapsible for cycle-mode tasks. Null =
+  // smart-default at creation (TCSEM-03). Edit-form currently ignores
+  // this on save (see lib/actions/tasks.ts updateTask comment).
+  last_done?: string | null;
 };
 
 const QUICK_SELECT: { label: string; days: number }[] = [
@@ -122,6 +132,11 @@ export function TaskForm({
       anchor_date: defaultAnchor || null,
       assigned_to_id: defaultAssigned,
       notes: task?.notes ?? '',
+      // Phase 13 Plan 13-02 (TCSEM-01): seed the Advanced collapsible's
+      // last-done input from an existing row (edit mode) or null
+      // (create). Create mode drives the TCSEM-03 smart-default branch
+      // when left blank.
+      last_done: task?.last_done ?? null,
     },
   });
 
@@ -312,6 +327,59 @@ export function TaskForm({
             <p className="text-sm text-destructive">{anchorError}</p>
           )}
         </div>
+      )}
+
+      {/*
+        Phase 13 Plan 13-02 (TCSEM-01 + D-15, D-16): Advanced collapsible.
+        Default collapsed. Contains the optional "Last done" date field.
+        Rendered only for cycle-mode tasks (D-03 hides for anchored;
+        D-04 hides for OOFT — OOFT form UI is Phase 15 scope, so the
+        cycle guard alone is sufficient for v1.1's Phase 13 ship).
+
+        When last_done is supplied, the server action's TCSEM-02 branch
+        computes firstIdeal = last_done + frequency_days, then runs the
+        load-smoothing placement. Blank last_done routes to TCSEM-03's
+        smart-default (≤7 → tomorrow; 8..90 → cycle/4; >90 → cycle/3).
+      */}
+      {scheduleMode === 'cycle' && (
+        <Collapsible className="space-y-3">
+          <CollapsibleTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full justify-between text-sm text-muted-foreground"
+            >
+              <span>Advanced</span>
+              <span aria-hidden="true">▾</span>
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 rounded-md border border-border/60 bg-muted/30 p-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="task-last-done">Last done (optional)</Label>
+              <Controller
+                control={control}
+                name="last_done"
+                render={({ field }) => (
+                  <Input
+                    id="task-last-done"
+                    type="date"
+                    value={field.value ?? ''}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value.length > 0 ? e.target.value : null,
+                      )
+                    }
+                    name="last_done"
+                  />
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                When did you last do this? Blank = HomeKeep picks a smart first-due.
+              </p>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       )}
 
       <div className="space-y-1.5">

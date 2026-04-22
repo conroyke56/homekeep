@@ -81,6 +81,15 @@ export const taskSchema = z
     // Null for v1.0 holdover rows; read-time falls through to natural
     // cadence per D-02.
     next_due_smoothed: z.string().nullable().optional(),
+    // Phase 13 (TCSEM-01, TCSEM-02): optional last-done date from the
+    // task-form Advanced collapsible. Cycle mode only — anchored and
+    // OOFT bypass smoothing entirely (D-03, D-04). Null = use TCSEM-03
+    // smart default at placement time. The server action in
+    // lib/actions/tasks.ts converts the string → Date and passes to
+    // computeFirstIdealDate. No refine: the field is purely optional
+    // and semantically ignored when schedule_mode !== 'cycle' (form
+    // hides the field; server branch-guards before consuming it).
+    last_done: z.string().nullable().optional(),
   })
   .refine(
     (d) =>
