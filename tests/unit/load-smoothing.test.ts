@@ -482,45 +482,46 @@ describe('computeHouseholdLoad', () => {
   });
 
   test('T7: cycle task with next_due_smoothed contributes on smoothed; without smoothed contributes on natural', () => {
-    // Sub-case A: smoothed set. Read-path D-02 (Wave 2) isn't wired in
-    // this test — placeNextDue doesn't affect computeHouseholdLoad's
-    // contribution here because computeNextDue (Wave 2) will consume
-    // the field. For Wave 1, smoothed-vs-natural contribution is
-    // indistinguishable through computeNextDue (Wave 2 has not yet
-    // added the smoothed branch). Expected contribution on NATURAL
-    // cycle date (lastCompletion + freq) for both sub-cases.
+    // Wave 2 contract (Plan 12-02): computeNextDue's new smoothed branch
+    // consumes task.next_due_smoothed when set (and not anchored / not
+    // wake-up). computeHouseholdLoad composes computeNextDue, so the
+    // load Map reflects the smoothed date for sub-case A and the natural
+    // date for sub-case B (v1.0 holdover fallback per D-02).
     //
-    // This test documents the behavior AS OF WAVE 1: both sub-cases
-    // contribute on lastCompletion + freq. Wave 2 will add a test
-    // asserting smoothed-set → contributes on smoothed.
+    // This test was locked to Wave 1 transient behavior in Plan 12-01
+    // (both sub-cases contributed on natural because no smoothed branch
+    // existed yet). Plan 12-01 SUMMARY §Handoff for Wave 2 flagged this
+    // as the expected Wave-2 flip; Plan 12-02 updates it.
     const lastCompletion = '2026-04-24T00:00:00.000Z';
-    const expectedNaturalKey = isoDateKey(
+    const naturalKey = isoDateKey(
       addDays(new Date(lastCompletion), 7),
       TZ,
     );
-    const latest = new Map<string, CompletionRecord>();
+    const smoothedKey = isoDateKey(new Date('2026-05-04T00:00:00.000Z'), TZ);
 
-    // A: smoothed set (+3 days past natural). Wave 1: computeNextDue
-    // doesn't consult next_due_smoothed yet, so contribution is still
-    // on the natural date. This test locks that Wave 1 behavior.
+    // A: smoothed set (+3 days past natural). Wave 2: computeNextDue
+    // consults next_due_smoothed → contribution shifts to the smoothed
+    // date. Natural-key slot is NOT populated.
+    const latestA = new Map<string, CompletionRecord>();
     const taskA = makeTask({
       id: 't-cycleA',
       frequency_days: 7,
       next_due_smoothed: '2026-05-04T00:00:00.000Z', // natural + 3d
     });
-    latest.set(taskA.id, makeCompletionRecord(taskA.id, lastCompletion));
+    latestA.set(taskA.id, makeCompletionRecord(taskA.id, lastCompletion));
 
     const loadA = computeHouseholdLoad(
       [taskA],
-      latest,
+      latestA,
       new Map(),
       NOW,
       120,
       TZ,
     );
-    expect(loadA.get(expectedNaturalKey)).toEqual(1);
+    expect(loadA.get(smoothedKey)).toEqual(1);
+    expect(loadA.get(naturalKey)).toBeUndefined();
 
-    // B: smoothed null (v1.0 holdover). Same contribution date.
+    // B: smoothed null (v1.0 holdover). Fall through to natural branch.
     const taskB = makeTask({
       id: 't-cycleB',
       frequency_days: 7,
@@ -537,7 +538,7 @@ describe('computeHouseholdLoad', () => {
       120,
       TZ,
     );
-    expect(loadB.get(expectedNaturalKey)).toEqual(1);
+    expect(loadB.get(naturalKey)).toEqual(1);
   });
 
   test('T8: windowDays bound excludes tasks with next_due > now + windowDays', () => {
