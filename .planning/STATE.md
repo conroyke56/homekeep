@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: milestone_complete
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-04-21T09:56:04.844Z"
-last_activity: 2026-04-21
+milestone: v1.1
+milestone_name: scheduling-and-flexibility
+status: milestone_started
+stopped_at: defining_requirements
+last_updated: "2026-04-22T00:00:00.000Z"
+last_activity: 2026-04-22
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 26
-  completed_plans: 27
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-20)
+See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** The household's recurring maintenance is visible, evenly distributed, and nothing falls through the cracks — without creating anxiety or guilt.
-**Current focus:** Phase 7 — PWA & Release
+**Current focus:** v1.1 — Scheduling & Flexibility (defining requirements)
 
 ## Current Position
 
-Phase: 7
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-04-21
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-22 — Milestone v1.1 started (audit at `.planning/v1.1/audit.md`)
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 

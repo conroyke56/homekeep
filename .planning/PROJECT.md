@@ -8,44 +8,36 @@ A self-hosted, open-source household maintenance PWA for couples and families. E
 
 The household's recurring maintenance is visible, evenly distributed, and nothing falls through the cracks — without creating anxiety or guilt.
 
+## Current Milestone: v1.1 Scheduling & Flexibility
+
+**Goal:** Give users finer control over WHEN tasks fire — one-off tasks, weekday/weekend constraints, seasonal dormancy, and manual reschedule (snooze + permanent shift) — without breaking v1.0 data, the coverage ring, or the early-completion guard.
+
+**Target features:**
+- One-off tasks (`frequency_days` nullable; auto-archive on completion)
+- Per-task `preferred_days` constraint (any/weekend/weekday) — scheduler searches forward to land on a matching weekday
+- Seasonal tasks (`active_from_month` + `active_to_month`) with cross-year wrap, dormancy-aware coverage, and "Sleeps until" badge
+- Manual reschedule via action sheet ("Just this time" → `schedule_overrides` table; "From now on" → mutate `tasks.anchor_date` directly)
+- First-run seed offset (stagger first-due dates across cycle via `via='seed-stagger'` synthetic completions, filtered from History/stats/notifications)
+- SPEC.md → v0.3 with v1.1 changelog and MIT→AGPL drift fix (also fixes `INFR-12`)
+
+**Key context:** Discovery audit produced `.planning/v1.1/audit.md` (3,800 words) before scoping. All v1.1 migrations are additive and backward-compatible — v1.0.0 installs upgrading via `:1` or `:latest` lose nothing. Phase numbering continues from Phase 8 (no `--reset-phase-numbers`).
+
 ## Requirements
 
-### Validated
+### Validated (v1.0)
 
-(None yet — ship to validate)
+All 71 v1.0 requirements shipped (AUTH/HOME/AREA/TASK/COMP/VIEW/AREA-V/PERS/HIST/ONBD/NOTF/GAME/INFR — see `MILESTONES.md` and `REQUIREMENTS.md` Traceability for phase mapping). v1.0.0 is tagged and live on GHCR (`:1.0.0`, `:1`, `:latest`).
 
-### Active
+### Active (v1.1)
 
-- [ ] Email/password auth (PocketBase built-in)
-- [ ] Multiple homes per user with last-viewed-home default landing
-- [ ] Share a home via shareable invite link (no SMTP dependency)
-- [ ] Areas within a home (location-scoped or whole_home scope)
-- [ ] Auto-created "Whole Home" area per home
-- [ ] Tasks with name, frequency (days), area, optional notes, optional assignee
-- [ ] Cascading assignment (task → area → anyone)
-- [ ] Complete a task (records who, when)
-- [ ] Early-completion guard (prompt when <25% of cycle elapsed)
-- [ ] Cycle and anchored schedule modes
-- [ ] Three-band main view (Overdue / This Week / Horizon)
-- [ ] By Area view with per-area coverage %
-- [ ] Person view (your tasks + history)
-- [ ] History view (household activity timeline)
-- [ ] Coverage ring (equal-weight, frequency-normalized overdue ratio)
-- [ ] Year-view horizon (12-month calendar strip)
-- [ ] Seed task library with first-run wizard
-- [ ] Add custom tasks
-- [ ] Per-user ntfy notification preferences
-- [ ] Hourly scheduler for overdue detection + ntfy push
-- [ ] Household streak (consecutive weeks with completions)
-- [ ] Weekly summary notification (opt-in)
-- [ ] Single Docker image, multi-arch (amd64 + arm64)
-- [ ] Three compose variants (LAN-only, Caddy, Tailscale)
-- [ ] Graceful degradation without HTTPS (inform, don't break)
-- [ ] Single `./data` volume for all persistence
-- [ ] PWA manifest + service worker (HTTPS modes only)
-- [ ] `/api/health` endpoint
-- [ ] GitHub Actions CI/CD → GHCR multi-arch publish
-- [ ] MIT license
+See `REQUIREMENTS.md` for full REQ-IDs. Summary:
+
+- [ ] **OOFT** — One-off tasks (Idea 1)
+- [ ] **PREF** — Preferred-days hard constraint (Idea 2)
+- [ ] **SEAS** — Seasonal tasks with active months (Idea 5, Q2)
+- [ ] **SNZE** — Snooze + permanent reschedule via action sheet (Idea 4, Q1)
+- [ ] **SDST** — First-run seed-stagger offset (Idea 3)
+- [ ] **DOCS** — SPEC.md v0.3 + AGPL drift fix + v1.1 changelog
 
 ### Out of Scope
 
@@ -58,12 +50,13 @@ The household's recurring maintenance is visible, evenly distributed, and nothin
 - i18n (v1 is English only, strings extractable for later)
 - Offline-first write sync — reads cached, writes require connection
 - Real-time collaboration / presence — overkill for household app
-- Documented public API (v1.1)
-- Webhooks (v1.1)
+- Documented public API (deferred to v1.2+)
+- Webhooks (deferred to v1.2+)
 - Kids/chores mode (post-1.1)
-- Area groups (v1.1)
-- Task rotation (v1.1)
-- Photo attachments on completion (v1.1)
+- Area groups (deferred to v1.2+)
+- Task rotation (deferred to v1.2+)
+- Photo attachments on completion (deferred to v1.2+)
+- `preferred_days` as a soft "nudge" — replaced by hard-constraint framing in v1.1 (see audit Idea 2 reshape)
 
 ## Context
 
@@ -93,6 +86,12 @@ The household's recurring maintenance is visible, evenly distributed, and nothin
 | Link-only invites (no SMTP) | Removes config burden for self-hosters; progressive enhancement later | — Pending |
 | Equal-weight coverage ring | Formula's overdue_ratio already normalizes by frequency; simpler to reason about | — Pending |
 | Last-viewed-home landing | Most users have 1 home; extra picker tap is unnecessary friction | — Pending |
+| v1.1: schedule_overrides as collection (not fields) | Snooze history preserved; supports v1.2 "recent reschedules" surface without refactor | — v1.1 Pending |
+| v1.1: preferred_days as hard constraint (not nudge) | User intent: "task is too big for a Tuesday, don't put it there"; scheduler searches forward up to +6 days | — v1.1 Pending |
+| v1.1: seasonal via two-task-per-season pattern | One task per cadence keeps the data model boring; varying frequency over months is a UX trap | — v1.1 Pending |
+| v1.1: action-sheet reschedule, no drag | Mobile-first PWA; 58px Horizon cells make drag fragile; same user problem at half the cost | — v1.1 Pending |
+| v1.1: seed-stagger via `completions.via='seed-stagger'` | Smaller schema delta than new field; History/stats/notifications filter on `via` | — v1.1 Pending |
+| v1.1: phase numbering continues from 8 | Phases are absolute project milestones, not per-milestone counters | — v1.1 Pending |
 
 ## Evolution
 
@@ -112,4 +111,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after initialization*
+*Last updated: 2026-04-22 — v1.1 Scheduling & Flexibility milestone started (audit at `.planning/v1.1/audit.md`)*
