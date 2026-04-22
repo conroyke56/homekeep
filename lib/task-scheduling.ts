@@ -219,6 +219,57 @@ export function computeNextDue(
     // else: stale override; fall through to cycle/anchored natural branch.
   }
 
+  // ─── Phase 12 smoothed branch (D-02, LOAD-02, LOAD-06, LOAD-07) ───
+  // The LOAD smoother wrote `next_due_smoothed` on the previous
+  // completion's atomic batch (Plan 12-03). Branch precedence per
+  // D-02: this fires AFTER the override branch and BEFORE the Phase
+  // 11 seasonal block.
+  //
+  // LOAD-06 anchored bypass (D-03): anchored-mode tasks NEVER consult
+  // next_due_smoothed — byte-identical v1.0 behavior. Even if a task
+  // flipped cycle → anchored mid-v1.1, a stale smoothed value is
+  // ignored (the schedule_mode guard is authoritative).
+  //
+  // LOAD-07 seasonal-wakeup handshake (D-15): if the task has a
+  // seasonal window AND is first-cycle / prior-season, DON'T
+  // short-circuit here — let the Phase 11 seasonal-wakeup branch
+  // below return nextWindowOpenDate. The wake-up date is a calendar
+  // landmark, not a load-smoothing target. From the second cycle
+  // onward (same-season, lastInPriorSeason=false), we fall through
+  // to this branch normally.
+  //
+  // v1.0 backcompat (T-12-03): NULL next_due_smoothed falls through
+  // to the Phase 11 seasonal / OOFT / cycle / anchored branches —
+  // byte-identical v1.0 read behavior until the first post-upgrade
+  // completion writes a smoothed date.
+  //
+  // T-12-07 defense: invalid stored string → new Date(s) yields
+  // Invalid Date; `getTime() > 0` is false (NaN comparison), and
+  // the seasonal / cycle branches still run below. No crash.
+  if (
+    task.schedule_mode !== 'anchored'
+    && task.next_due_smoothed
+  ) {
+    const hasWindow =
+      task.active_from_month != null && task.active_to_month != null;
+    const treatAsWakeup = hasWindow && (
+      !lastCompletion
+      || wasInPriorSeason(
+           new Date(lastCompletion.completed_at),
+           task.active_from_month!,
+           task.active_to_month!,
+           now,
+           timezone,
+         )
+    );
+    if (!treatAsWakeup) {
+      const smoothed = new Date(task.next_due_smoothed);
+      if (smoothed.getTime() > 0) return smoothed;
+      // Invalid Date (T-12-07) → fall through to seasonal / cycle.
+    }
+    // else: fall through to seasonal block — wake-up anchors to window.
+  }
+
   // ─── Phase 11 seasonal branches (D-12) ──────────────────────────────
   // hasWindow = task is seasonal. Precompute the "prior-season" state
   // once — both the dormant and wake-up branches need it:
