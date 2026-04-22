@@ -186,7 +186,73 @@
 - [x] **INFR-12
 **: MIT license, public GitHub repo
 
-## v2 Requirements (v1.1)
+## v1.1 Requirements (Scheduling & Flexibility)
+
+**Audit:** `.planning/v1.1/audit.md` (3,800 words, 5 ideas + 2 cross-cutting Qs).
+**Locked:** 2026-04-22.
+**Constraints:** Additive migrations only. v1.0 data preserved. 311 unit + 23 E2E pass. Coverage ring + early-completion guard intact.
+
+### One-Off Tasks (OOFT)
+
+- [ ] **OOFT-01**: User can create a task without a frequency (one-off task; `tasks.frequency_days` nullable)
+- [ ] **OOFT-02**: One-off task automatically archives after first completion (atomic with completion write)
+- [ ] **OOFT-03**: One-off tasks appear in the Overdue band from the moment created (next_due = task.created)
+- [ ] **OOFT-04**: Task form distinguishes "Recurring" (with frequency) vs "One-off" (no frequency); anchored mode disallowed for one-off
+
+### Preferred-Days Constraint (PREF)
+
+- [ ] **PREF-01**: User can set per-task `preferred_days` (any / weekend / weekday) on the task form
+- [ ] **PREF-02**: Scheduler / computeNextDue searches forward up to +6 days from the natural date to land on a matching weekday
+- [ ] **PREF-03**: When natural date already matches the constraint, no shift applied
+- [ ] **PREF-04**: Constraint never produces an early date — result is always equal-or-later than the natural cycle date
+
+### Seasonal Tasks (SEAS)
+
+- [ ] **SEAS-01**: User can set `active_from_month` and `active_to_month` per task (both nullable; both null = year-round)
+- [ ] **SEAS-02**: Out-of-window tasks return `null` from computeNextDue (invisible to scheduler, coverage, and main views)
+- [ ] **SEAS-03**: When the active window opens, computeNextDue returns the start-of-window date (in home timezone) as next_due
+- [ ] **SEAS-04**: Cross-year wrap supported: a window like Oct→Mar correctly includes Dec, Jan, Feb
+- [ ] **SEAS-05**: Coverage ring excludes dormant tasks from its mean (treats them like archived)
+- [ ] **SEAS-06**: Dormant tasks render dimmed with "Sleeps until <Mon Year>" badge in By Area and Person views
+- [ ] **SEAS-07**: Task form gains an optional "Active months" section (from/to month dropdowns)
+- [ ] **SEAS-08**: Form warns (does not block) when an anchored task's series falls predominantly outside its active window
+- [ ] **SEAS-09**: Seed library extends with two seasonal task pairs (mowing warm/cool; HVAC seasonal pair)
+- [ ] **SEAS-10**: History view always shows completions regardless of current season state
+
+### Snooze & Permanent Reschedule (SNZE)
+
+- [ ] **SNZE-01**: User can open a "Reschedule" action sheet from any task in any view
+- [ ] **SNZE-02**: Action sheet includes a date picker defaulting to the natural next due
+- [ ] **SNZE-03**: Action sheet has a "Just this time" / "From now on" radio (default: Just this time)
+- [ ] **SNZE-04**: New `schedule_overrides` PB collection stores one-off snoozes `(id, task_id, snooze_until, consumed_at, created)`
+- [ ] **SNZE-05**: computeNextDue consults the latest active (unconsumed) override and returns it instead of the natural next_due
+- [ ] **SNZE-06**: Overrides are consumed when the next completion lands after the override date
+- [ ] **SNZE-07**: "From now on" mutates `tasks.anchor_date` directly (no override row written)
+- [ ] **SNZE-08**: Snoozing into a dormant season prompts an "Extend the active window?" confirmation dialog
+- [ ] **SNZE-09**: Coverage ring uses the snoozed (later) next_due (snoozed tasks don't drag coverage down)
+- [ ] **SNZE-10**: Scheduler ntfy `ref_cycle` keys on the resulting next_due (one notification per effective due date — idempotent re-firing)
+
+### Seed-Stagger First-Run Offset (SDST)
+
+- [ ] **SDST-01**: `completions.via` enum gains `'seed-stagger'` value
+- [ ] **SDST-02**: `batchCreateSeedTasks` writes one synthetic completion per task with `via='seed-stagger'` and a staggered `completed_at`
+- [ ] **SDST-03**: Stagger algorithm distributes first-due dates evenly within each frequency cohort (no two same-frequency tasks share a first-due date)
+- [ ] **SDST-04**: Stagger respects each task's active months (no first-due placed in a dormant period)
+- [ ] **SDST-05**: History view filters out `via='seed-stagger'` rows
+- [ ] **SDST-06**: Personal stats counters exclude `via='seed-stagger'` rows
+- [ ] **SDST-07**: Partner-completed and area-celebration notifications skip `via='seed-stagger'` rows
+
+### Documentation & Versioning (DOCS)
+
+- [ ] **DOCS-01**: SPEC.md bumped to v0.3
+- [ ] **DOCS-02**: SPEC.md three stale "MIT" references corrected to AGPL-3.0
+- [ ] **DOCS-03**: SPEC.md gains a v1.1 changelog section documenting all new features and data-model changes
+- [ ] **DOCS-04**: PROJECT.md `INFR-12` corrected to AGPL-3.0
+- [ ] **DOCS-05**: SPEC.md documents the new task fields (`preferred_days`, `active_from_month`, `active_to_month`, nullable `frequency_days`), the `schedule_overrides` collection, and the seed-stagger semantic
+
+## v1.2+ Candidates (deferred)
+
+These were noted as v1.1 in earlier planning but did NOT make it into the locked v1.1 scope. Re-evaluate during v1.2 milestone start.
 
 ### Area Groups
 
@@ -202,12 +268,17 @@
 - **API-01**: Documented REST API at `/api/v1/*` with stable contracts
 - **API-02**: Webhooks (task.overdue, task.completed, area.full_coverage)
 
+### Drag-to-Reschedule (deferred from v1.1; replaced by action-sheet snooze)
+
+- **DRAG-01**: Drag tasks between cells in the Horizon strip to reschedule (re-evaluate after v1.1 telemetry on snooze use)
+
 ### Additional
 
 - **V2-01**: Year-in-review dashboard (December summary)
 - **V2-02**: Photo attachment on completion (proof / before-after)
 - **V2-03**: Task categories as cross-cutting tags (cleaning, maintenance, seasonal)
 - **V2-04**: Export data as JSON
+- **V2-05**: "Recent reschedules" surface (made cheap by v1.1's `schedule_overrides` collection)
 
 ## Out of Scope
 
@@ -305,10 +376,9 @@
 | INFR-12 | Phase 1 | Complete (01-01) |
 
 **Coverage:**
-- v1 requirements: 71 total
-- Mapped to phases: 71
-- Unmapped: 0
+- v1.0 requirements: 71 total → all mapped, all complete
+- v1.1 requirements: 40 total → mapping pending (roadmapper next)
 
 ---
 *Requirements defined: 2026-04-20*
-*Last updated: 2026-04-20 after roadmap creation*
+*Last updated: 2026-04-22 — v1.1 requirements added (OOFT, PREF, SEAS, SNZE, SDST, DOCS)*
