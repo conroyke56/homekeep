@@ -432,6 +432,50 @@ describe('schedule_overrides (disposable PB, port 18098)', () => {
     expect(completion.completed_by_id).toBe(aliceId);
   }, 30_000);
 
+  // ─── SEC-02 body-check (Phase 23 Plan 23-01) ──────────────────────────
+  //
+  // Migration 1745280004 tightens schedule_overrides.createRule to also
+  // require `@request.body.created_by_id = @request.auth.id`, matching
+  // completions' defense-in-depth pattern. Scenario 11 proves the new
+  // clause blocks forged attribution where a member tries to create an
+  // override attributed to a DIFFERENT user (even within the same home,
+  // though here we reuse Alice's own home with created_by_id=malloryId
+  // — the cross-user-within-home case is the genuine attack surface).
+  //
+  // Scenario 12 regression: happy path (caller == body.created_by_id)
+  // still succeeds post-migration.
+
+  test('Scenario 11 — SEC-02 forged created_by_id rejected by body-check', async () => {
+    const snoozeIso = new Date(Date.now() + 21 * 86400000).toISOString();
+    let err: unknown;
+    try {
+      await pbAlice.collection('schedule_overrides').create({
+        task_id: t3Id, // Alice's own task (she is a member of this home)
+        snooze_until: snoozeIso,
+        created_by_id: malloryId, // FORGED: attributing to another user
+      });
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(ClientResponseError);
+    // PB 0.37.1 returns 400 for createRule rule-gate failures; accept any 4xx.
+    expect((err as ClientResponseError).status).toBeGreaterThanOrEqual(400);
+  }, 30_000);
+
+  test('Scenario 12 — SEC-02 regression: self-attributed override still succeeds', async () => {
+    const snoozeIso = new Date(Date.now() + 45 * 86400000).toISOString();
+    const override = await pbAlice.collection('schedule_overrides').create({
+      task_id: t3Id,
+      snooze_until: snoozeIso,
+      created_by_id: aliceId, // correct: caller is Alice
+    });
+    expect(override.id).toBeTruthy();
+    expect(override.created_by_id).toBe(aliceId);
+    // Cleanup — don't leave an active override that future scenarios
+    // might bump into if the file grows.
+    await pbAlice.collection('schedule_overrides').delete(override.id);
+  }, 30_000);
+
   test('Scenario 10 — completeTaskAction with no active override works unchanged (regression)', async () => {
     // Pre-state: t3 has no override (Scenario 5 already asserted that).
     currentPb = pbAlice;
