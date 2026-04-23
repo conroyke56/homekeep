@@ -47,10 +47,18 @@ cronAdd('demo-cleanup', '*/15 * * * *', () => {
   const idleCutoff = new Date(now.getTime() - 2 * 60 * 60 * 1000); // now-2h
   const absoluteCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000); // now-24h
 
-  // PB datetime filter format: PB stores/filters as "YYYY-MM-DD HH:MM:SS.mmmZ"
-  // but accepts ISO strings in filter() expressions — the parser normalises.
-  const idleCutoffIso = idleCutoff.toISOString();
-  const absoluteCutoffIso = absoluteCutoff.toISOString();
+  // DEVIATION (Rule 1 — bug caught by tests/unit/demo-session-integration
+  // .test.ts Scenario 4): PB 0.37.x stores datetimes in space-separated
+  // format ("YYYY-MM-DD HH:MM:SS.mmmZ") and the filter parser does a
+  // raw STRING comparison against the stored value. JS Date.toISOString()
+  // emits T-separated ("YYYY-MM-DDTHH:MM:SS.mmmZ"), and since ' ' (0x20)
+  // is less than 'T' (0x54) ANY stored datetime sorts lexicographically
+  // before an ISO-T cutoff. Result: without this .replace('T', ' ') the
+  // idle filter would match EVERY demo user on every sweep and nuke
+  // brand-new sessions the moment they're created. Convert ISO to PB's
+  // space-separated form before embedding in the filter.
+  const idleCutoffIso = idleCutoff.toISOString().replace('T', ' ');
+  const absoluteCutoffIso = absoluteCutoff.toISOString().replace('T', ' ');
 
   // Filter composition:
   //   is_demo = true AND (last_activity < idleCutoff OR created < absoluteCutoff)
