@@ -142,7 +142,7 @@ test.describe.serial('Suite E: Notifications & Gamification (06-03)', () => {
   test('Part 1: /person shows real notification prefs form; save + reload persists topic and weekly_summary_day', async ({
     page,
   }) => {
-    const pw = 'password123';
+    const pw = 'password1234';
     const email = `notif-p1-${stamp()}@test.local`;
     await signup(page, email, pw, 'Alice Prefs');
     const homeUrl = await createHome(page, 'Notif P1 Home');
@@ -201,7 +201,7 @@ test.describe.serial('Suite E: Notifications & Gamification (06-03)', () => {
     page,
     request,
   }) => {
-    const pw = 'password123';
+    const pw = 'password1234';
     const email = `notif-p2-${stamp()}@test.local`;
     await signup(page, email, pw, 'Alice Scheduler');
     const homeUrl = await createHome(page, 'Notif P2 Home');

@@ -27,7 +27,7 @@ test('signup -> logout -> login -> session persists across reload', async ({
   context,
 }) => {
   const uniqueEmail = `auth-${Date.now()}-${Math.floor(Math.random() * 1e6)}@test.com`;
-  const pw = 'password123';
+  const pw = 'password1234';
 
   // Signup
   await page.goto('/signup');
@@ -72,8 +72,8 @@ test('signup with invalid email shows field error', async ({ page }) => {
   await page.goto('/signup');
   await page.fill('[name=name]', 'Bad Email');
   await page.fill('[name=email]', 'not-an-email');
-  await page.fill('[name=password]', 'password123');
-  await page.fill('[name=passwordConfirm]', 'password123');
+  await page.fill('[name=password]', 'password1234');
+  await page.fill('[name=passwordConfirm]', 'password1234');
   await page.click('button[type=submit]');
   // Still on /signup with an email error visible
   await expect(page).toHaveURL(/\/signup/);

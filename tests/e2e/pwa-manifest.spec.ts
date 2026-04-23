@@ -55,7 +55,7 @@ test('InsecureContextBanner renders on HTTP authed layout and persists dismissal
   // Signup + create home to reach the authed /h/[homeId] layout where
   // the banner is mounted (05-01 NavShell segment + 07-01 banner).
   const uniqueEmail = `pwa-${Date.now()}-${Math.floor(Math.random() * 1e6)}@test.com`;
-  const pw = 'password123';
+  const pw = 'password1234';
 
   await page.goto('/signup');
   await page.fill('[name=name]', 'PWA Test');

@@ -65,7 +65,7 @@ test.describe.serial('Phase 5 Onboarding (D-19) — Suite A', () => {
   test('Scenario 1: happy path — wizard → skip 3 + edit 1 + submit → dashboard → revisit redirects away', async ({
     page,
   }) => {
-    const pw = 'password123';
+    const pw = 'password1234';
     const email = `onboarding-a1-${stamp()}@test.local`;
     await signup(page, email, pw, 'Olivia Onboarding');
 
@@ -146,7 +146,7 @@ test.describe.serial('Phase 5 Onboarding (D-19) — Suite A', () => {
   test('Scenario 2: skip all → dashboard empty state → revisit redirects away', async ({
     page,
   }) => {
-    const pw = 'password123';
+    const pw = 'password1234';
     const email = `onboarding-a2-${stamp()}@test.local`;
     await signup(page, email, pw, 'Sam Skipper');
 

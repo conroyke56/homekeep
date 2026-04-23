@@ -36,7 +36,7 @@ test('create home → Whole Home auto-created → add Kitchen → edit → delet
   page,
 }) => {
   const email = `homes-${Date.now()}-${Math.floor(Math.random() * 1e6)}@test.com`;
-  await signup(page, email, 'password123');
+  await signup(page, email, 'password1234');
 
   // Empty state CTA
   await page.click('text=Create your first home');
@@ -97,7 +97,7 @@ test('multiple homes + last-viewed persistence (HOME-03 / HOME-04)', async ({
   page,
 }) => {
   const email = `multi-${Date.now()}-${Math.floor(Math.random() * 1e6)}@test.com`;
-  const pw = 'password123';
+  const pw = 'password1234';
   await signup(page, email, pw);
 
   // Phase 9 hides the HomeSwitcher when the user has a single home — the

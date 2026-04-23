@@ -16,15 +16,34 @@ import { z } from 'zod';
  * UI has no clean way to map it back to the field.
  */
 
+/**
+ * Phase 23 SEC-06: password minimum length raised 8 -> 12.
+ *
+ * loginSchema keeps min(8) because existing users authenticate with
+ * whatever password they set pre-23 (grandfathered — no forced reset).
+ * signup + reset-confirm schemas both require 12 chars, so NEW passwords
+ * land above the tightened bar. PB's own password floor is min(8), so
+ * the zod refine runs BEFORE the PB call and surfaces the stricter
+ * error to the user.
+ */
+
 export const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
+  // Keep min(8) here so grandfathered users with pre-SEC-06 8-char
+  // passwords can still log in. The signupSchema below and the
+  // resetConfirmSchema enforce the new 12-char floor on NEW passwords.
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
-export const signupSchema = loginSchema
-  .extend({
+export const signupSchema = z
+  .object({
+    email: z.string().email('Please enter a valid email'),
+    // SEC-06: new signups must use at least 12 characters.
+    password: z.string().min(12, 'Password must be at least 12 characters'),
     name: z.string().min(1, 'Name is required').max(80, 'Name too long'),
-    passwordConfirm: z.string().min(8, 'Password must be at least 8 characters'),
+    passwordConfirm: z
+      .string()
+      .min(12, 'Password must be at least 12 characters'),
   })
   .refine((d) => d.password === d.passwordConfirm, {
     message: 'Passwords do not match',
@@ -38,8 +57,12 @@ export const resetRequestSchema = z.object({
 export const resetConfirmSchema = z
   .object({
     token: z.string().min(1, 'Reset token is required'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
-    passwordConfirm: z.string().min(8, 'Password must be at least 8 characters'),
+    // SEC-06: reset-confirm writes a NEW password, so enforce the
+    // tightened 12-char floor (mirrors signupSchema).
+    password: z.string().min(12, 'Password must be at least 12 characters'),
+    passwordConfirm: z
+      .string()
+      .min(12, 'Password must be at least 12 characters'),
   })
   .refine((d) => d.password === d.passwordConfirm, {
     message: 'Passwords do not match',

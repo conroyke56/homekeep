@@ -248,7 +248,7 @@ test.describe('Phase 3 Core Loop (D-21)', () => {
     request,
   }) => {
     const email = `core-s1-${Date.now()}-${Math.floor(Math.random() * 1e6)}@test.com`;
-    const pw = 'password123';
+    const pw = 'password1234';
     await signup(page, email, pw);
 
     const homeUrl = await createHomeAndKitchen(page, 'TestHouseS1');
@@ -315,7 +315,7 @@ test.describe('Phase 3 Core Loop (D-21)', () => {
     request,
   }) => {
     const email = `core-s2-${Date.now()}-${Math.floor(Math.random() * 1e6)}@test.com`;
-    const pw = 'password123';
+    const pw = 'password1234';
     await signup(page, email, pw);
 
     const homeUrl = await createHomeAndKitchen(page, 'TestHouseS2');

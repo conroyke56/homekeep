@@ -250,7 +250,7 @@ test.describe('Phase 16 visual UAT — screenshot capture', () => {
   }) => {
     test.setTimeout(180_000);
 
-    const pw = 'password123';
+    const pw = 'password1234';
     const email = `p16-visual-${stamp()}@test.local`;
     await signup(page, email, pw, 'Phase 16 Validator');
     const homeUrl = await createHome(page, 'Phase 16 Test Home');

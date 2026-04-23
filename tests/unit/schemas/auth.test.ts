@@ -30,11 +30,47 @@ describe('loginSchema', () => {
 });
 
 describe('signupSchema', () => {
-  test('accepts a full valid shape', () => {
+  test('accepts a full valid shape (>= 12 char password — SEC-06)', () => {
     const r = signupSchema.safeParse({
       email: 'a@b.co',
-      password: 'password123',
-      passwordConfirm: 'password123',
+      password: 'passwordabc123', // 14 chars
+      passwordConfirm: 'passwordabc123',
+      name: 'Alice',
+    });
+    expect(r.success).toBe(true);
+  });
+
+  test('SEC-06 — rejects 8-char password under passwordConfirm minimum too', () => {
+    const r = signupSchema.safeParse({
+      email: 'a@b.co',
+      password: 'abcdefgh', // exactly 8 chars — pre-SEC-06 floor
+      passwordConfirm: 'abcdefgh',
+      name: 'Alice',
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.flatten().fieldErrors.password?.[0]).toMatch(/12/);
+    }
+  });
+
+  test('SEC-06 — rejects 11-char password (one short of the floor)', () => {
+    const r = signupSchema.safeParse({
+      email: 'a@b.co',
+      password: 'elevenchars', // 11 chars
+      passwordConfirm: 'elevenchars',
+      name: 'Alice',
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.flatten().fieldErrors.password?.[0]).toMatch(/12/);
+    }
+  });
+
+  test('SEC-06 — accepts exactly 12 chars (the new floor)', () => {
+    const r = signupSchema.safeParse({
+      email: 'a@b.co',
+      password: 'twelvechars1', // 12 chars
+      passwordConfirm: 'twelvechars1',
       name: 'Alice',
     });
     expect(r.success).toBe(true);
@@ -43,8 +79,8 @@ describe('signupSchema', () => {
   test('rejects mismatched passwordConfirm under passwordConfirm path (Pitfall 12)', () => {
     const r = signupSchema.safeParse({
       email: 'a@b.co',
-      password: 'abcdefgh',
-      passwordConfirm: 'wrongpass',
+      password: 'abcdefghijkl', // 12 chars
+      passwordConfirm: 'mnopqrstuvwx', // 12 chars, different
       name: 'Alice',
     });
     expect(r.success).toBe(false);
@@ -58,8 +94,8 @@ describe('signupSchema', () => {
   test('rejects missing name with fieldErrors.name', () => {
     const r = signupSchema.safeParse({
       email: 'a@b.co',
-      password: 'password123',
-      passwordConfirm: 'password123',
+      password: 'passwordabc123', // 14 chars
+      passwordConfirm: 'passwordabc123',
       name: '',
     });
     expect(r.success).toBe(false);
@@ -82,20 +118,32 @@ describe('resetRequestSchema', () => {
 });
 
 describe('resetConfirmSchema', () => {
-  test('accepts a valid token + matching passwords', () => {
+  test('accepts a valid token + matching passwords (>= 12 chars — SEC-06)', () => {
     const r = resetConfirmSchema.safeParse({
       token: 'sometoken',
-      password: 'abcdefgh',
-      passwordConfirm: 'abcdefgh',
+      password: 'twelvechars1', // 12 chars
+      passwordConfirm: 'twelvechars1',
     });
     expect(r.success).toBe(true);
+  });
+
+  test('SEC-06 — rejects 8-char password on reset-confirm', () => {
+    const r = resetConfirmSchema.safeParse({
+      token: 'sometoken',
+      password: 'abcdefgh', // 8 chars
+      passwordConfirm: 'abcdefgh',
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.flatten().fieldErrors.password?.[0]).toMatch(/12/);
+    }
   });
 
   test('rejects mismatched passwords under passwordConfirm', () => {
     const r = resetConfirmSchema.safeParse({
       token: 'sometoken',
-      password: 'abcdefgh',
-      passwordConfirm: 'different',
+      password: 'abcdefghijkl', // 12 chars
+      passwordConfirm: 'mnopqrstuvwx', // 12 chars, different
     });
     expect(r.success).toBe(false);
     if (!r.success) {
@@ -106,8 +154,8 @@ describe('resetConfirmSchema', () => {
   test('rejects empty token', () => {
     const r = resetConfirmSchema.safeParse({
       token: '',
-      password: 'abcdefgh',
-      passwordConfirm: 'abcdefgh',
+      password: 'twelvechars1', // 12 chars
+      passwordConfirm: 'twelvechars1',
     });
     expect(r.success).toBe(false);
     if (!r.success) {

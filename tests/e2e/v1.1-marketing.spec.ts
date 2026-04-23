@@ -218,7 +218,7 @@ test.describe('v1.1 marketing — README screenshot capture', () => {
   }) => {
     test.setTimeout(240_000);
 
-    const pw = 'password123';
+    const pw = 'password1234';
     const email = `v11-marketing-${stamp()}@test.local`;
     await signup(page, email, pw, 'Alex Kemp');
     const homeUrl = await createHome(page, 'The Kemp Residence');

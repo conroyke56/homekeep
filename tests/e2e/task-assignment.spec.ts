@@ -54,7 +54,7 @@ async function createHome(page: Page, homeName: string): Promise<string> {
 test('Suite B: task assignee cascade on member removal', async ({
   browser,
 }) => {
-  const pw = 'password123';
+  const pw = 'password1234';
   const ownerEmail = `owner-ta-${stamp()}@test.local`;
   const inviteeEmail = `invitee-ta-${stamp()}@test.local`;
 

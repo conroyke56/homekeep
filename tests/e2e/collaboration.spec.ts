@@ -65,7 +65,7 @@ function extractHomeId(homeUrl: string): string {
 test.describe.serial('Phase 4 collaboration (D-20)', () => {
   const ownerEmail = `owner-${stamp()}@test.local`;
   const inviteeEmail = `invitee-${stamp()}@test.local`;
-  const pw = 'password123';
+  const pw = 'password1234';
   let sharedHomeId = '';
 
   test('Suite A: owner creates invite → invitee signs up via link → both see each other in /members', async ({

@@ -46,7 +46,7 @@ test('D-21 full happy path: signup -> home -> area -> cycle task -> anchored tas
   page,
 }) => {
   const email = `tasks-full-${Date.now()}-${Math.floor(Math.random() * 1e6)}@test.com`;
-  const pw = 'password123';
+  const pw = 'password1234';
   await signup(page, email, pw);
 
   // Create first home
@@ -161,7 +161,7 @@ test('D-21 full happy path: signup -> home -> area -> cycle task -> anchored tas
 
 test('archive task removes it from the area active list', async ({ page }) => {
   const email = `tasks-archive-${Date.now()}-${Math.floor(Math.random() * 1e6)}@test.com`;
-  const pw = 'password123';
+  const pw = 'password1234';
   await signup(page, email, pw, 'Archive Test');
 
   // Create home

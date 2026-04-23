@@ -202,7 +202,7 @@ test.describe.serial('Phase 5 Views (D-19) — Suite B: by-area', () => {
     page,
     request,
   }) => {
-    const pw = 'password123';
+    const pw = 'password1234';
     const email = `views-b-${stamp()}@test.local`;
     await signup(page, email, pw, 'Alice Area');
     const homeUrl = await createHome(page, 'Phase 5 Area Test');
@@ -280,7 +280,7 @@ test.describe.serial('Phase 5 Views (D-19) — Suite C: person', () => {
     page,
     request,
   }) => {
-    const pw = 'password123';
+    const pw = 'password1234';
     const email = `views-c-${stamp()}@test.local`;
     await signup(page, email, pw, 'Carol Person');
     const homeUrl = await createHome(page, 'Phase 5 Person Test');
@@ -369,7 +369,7 @@ test.describe.serial('Phase 5 Views (D-19) — Suite D: history', () => {
     page,
     request,
   }) => {
-    const pw = 'password123';
+    const pw = 'password1234';
     const email = `views-d-${stamp()}@test.local`;
     await signup(page, email, pw, 'Dave History');
     const homeUrl = await createHome(page, 'Phase 5 History Test');
