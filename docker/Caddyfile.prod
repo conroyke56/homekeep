@@ -9,6 +9,21 @@
 
 {$DOMAIN} {
 	encode zstd gzip
+
+	# Phase 22 HOTFIX-01: block PB admin UI at the edge as defense-in-depth.
+	# The internal Caddyfile also blocks these paths; this is belt+suspenders
+	# so the block survives even if the internal Caddyfile ever changes.
+	@admin_path path /_/* /api/_superusers /api/_superusers/* /api/collections/_superusers/*
+	handle @admin_path {
+		@admin_allowed expression `{env.ALLOW_PUBLIC_ADMIN_UI} == "true"`
+		handle @admin_allowed {
+			reverse_proxy homekeep:3000 {
+				flush_interval -1
+			}
+		}
+		respond 404
+	}
+
 	reverse_proxy homekeep:3000 {
 		# flush_interval -1 preserves SSE/streaming behaviour; matches
 		# the internal docker/Caddyfile policy for /api/* and /_/* paths.

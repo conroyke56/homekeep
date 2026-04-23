@@ -14,10 +14,26 @@
 		}
 	}
 
-	handle /_/* {
-		reverse_proxy localhost:8090 {
-			flush_interval -1
+	# Phase 22 HOTFIX-01: PocketBase admin UI (/_/) blocked from public by
+	# default. PB admin login is a fingerprint + credential-spray target
+	# even when rate-limited. Return 404 so the path looks "not installed".
+	#
+	# Operators with admin need:
+	#   (a) `docker exec homekeep pocketbase superuser ...` from the host
+	#   (b) temporarily set ALLOW_PUBLIC_ADMIN_UI=true in docker/.env
+	#       (rotate back promptly — don't leave open on public deploys)
+	#
+	# Also blocks /api/_superusers and /api/collections/_superusers/* which
+	# are PB's superuser auth endpoints — same attack surface.
+	@admin_path path /_/* /api/_superusers /api/_superusers/* /api/collections/_superusers/*
+	handle @admin_path {
+		@admin_allowed expression `{env.ALLOW_PUBLIC_ADMIN_UI} == "true"`
+		handle @admin_allowed {
+			reverse_proxy localhost:8090 {
+				flush_interval -1
+			}
 		}
+		respond 404
 	}
 
 	handle {
