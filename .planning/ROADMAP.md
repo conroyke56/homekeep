@@ -438,7 +438,7 @@ Plans:
   3. GHCR Release workflow (now E2E-gated) advances `:latest` + `:1.1` tags on next successful push of a stable tag
   4. Seed helper pattern documented so future specs can seed back-dated completions without being shadowed by LOAD placement
 
-**Plans**: 1 plan (estimate 2-3 tasks)
+**Plans**: 1 plan (3 tasks)
 
 Plans:
-- [ ] 20-01: TBD
+- [ ] 20-01-P01-PLAN.md — Stabilize Scenario 1+2 under LOAD (seedCompletion PATCH + Option C flow-assertions + LOAD-aware doc block)
