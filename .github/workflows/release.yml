@@ -68,6 +68,12 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # SUPPLY-02: BuildKit emits SPDX SBOM + SLSA-3 provenance as OCI
+          # attestations on the pushed manifest. Inspect with:
+          #   docker buildx imagetools inspect <image> --format '{{ json .SBOM }}'
+          #   docker buildx imagetools inspect <image> --format '{{ json .Provenance }}'
+          sbom: true
+          provenance: mode=max
           build-args: |
             PB_VERSION=0.37.1
             S6_OVERLAY_VERSION=3.2.2.0
