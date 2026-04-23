@@ -327,14 +327,18 @@
 
 > **Per rider 3:** Forward-only LOAD is only safe if users have a manual escape hatch. Minimal v1.1 surface; richer features (per-task preview, undo, auto-trigger, area-scoped) deferred to v1.2+.
 
-- [ ] **REBAL-01**: Anchored-mode tasks preserved during rebalance (never re-placed)
-- [ ] **REBAL-02**: Tasks with unconsumed `schedule_overrides` rows preserved (snooze user intent wins)
+- [x] **REBAL-01
+**: Anchored-mode tasks preserved during rebalance (never re-placed)
+- [x] **REBAL-02
+**: Tasks with unconsumed `schedule_overrides` rows preserved (snooze user intent wins)
 - [x] **REBAL-03**: Tasks whose `next_due_smoothed` was last set via SNZE "From now on" preserved (per-task marker flag set by SNZE-07
 ; preservation enforced here)
-- [ ] **REBAL-04**: All other tasks re-run through `placeNextDue` with a fresh `computeHouseholdLoad` map
+- [x] **REBAL-04
+**: All other tasks re-run through `placeNextDue` with a fresh `computeHouseholdLoad` map
 - [ ] **REBAL-05**: Settings → Scheduling → "Rebalance schedule" button surfaces the action
 - [ ] **REBAL-06**: Preview modal shows counts only — "Will update: N" + "Will preserve: M" with breakdown by preservation reason (anchored / active snooze / "From now on")
-- [ ] **REBAL-07**: Re-placement processes the bucket-4 residual in ascending ideal-date order, updating in-memory load map between placements (deterministic, matches TCSEM batch pattern)
+- [x] **REBAL-07
+**: Re-placement processes the bucket-4 residual in ascending ideal-date order, updating in-memory load map between placements (deterministic, matches TCSEM batch pattern)
 
 ### Documentation & Versioning (DOCS)
 

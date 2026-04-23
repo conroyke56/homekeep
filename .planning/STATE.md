@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Scheduling & Flexibility
-status: verifying
-stopped_at: Completed 16-01-P01-PLAN.md (Phase 16 closed)
-last_updated: "2026-04-22T15:53:04.104Z"
-last_activity: 2026-04-22
+status: executing
+stopped_at: Completed 17-01-P01-PLAN.md (Wave 1 server)
+last_updated: "2026-04-23T01:43:07.640Z"
+last_activity: 2026-04-23
 progress:
   total_phases: 19
   completed_phases: 14
-  total_plans: 44
-  completed_plans: 47
+  total_plans: 46
+  completed_plans: 48
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** The household's recurring maintenance is visible, evenly distributed, and nothing falls through the cracks — without creating anxiety or guilt.
-**Current focus:** Phase 16 — Horizon Density Visualization
+**Current focus:** Phase 17 — Manual Rebalance
 
 ## Current Position
 
-Phase: 16 (Horizon Density Visualization) — EXECUTING
-Plan: 1 of 1
-Status: Phase complete — ready for verification
-Last activity: 2026-04-22
+Phase: 17 (Manual Rebalance) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-04-23
 
 Progress: [██████████] 100%
 
@@ -113,6 +113,7 @@ Progress: [██████████] 100%
 | Phase 15 P02 | 25min | 2 tasks | 13 files |
 | Phase 15 P03 | ~4min | 1 tasks | 1 files |
 | Phase 16 P01 | 40 | 5 tasks | 16 files |
+| Phase 17 P01 | ~20min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -319,6 +320,9 @@ Recent decisions affecting current work:
 - Phase 16: retired Phase 3 horizon-strip 3-dot + +N overflow tests — D-01 replaces that render with density tint; consolidated into count-invariant test
 - Phase 16: window.matchMedia polyfill added to task-detail-sheet-schedule.test.tsx beforeAll — jsdom ships without it and TaskDetailSheet's useIsDesktop hook requires it
 - Phase 16 close: Port 18104 claimed for horizon-density-integration; next free 18105 for Phase 17+
+- 17-01: fetch-and-classify shared preamble between preview/apply (avoids drift on the read-heavy auth+membership+projection+classifier path)
+- 17-01: marker clear uses null (Phase 15 convention); batch skips send() when empty to avoid no-op PB roundtrip
+- 17-01: deterministic mock placeNextDue for action tests + vi.importActual REAL placeNextDue for A2 threading proof
 
 ### Pending Todos
 
@@ -344,8 +348,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-22T15:52:53.607Z
-Stopped at: Completed 16-01-P01-PLAN.md (Phase 16 closed)
+Last session: 2026-04-23T01:43:07.624Z
+Stopped at: Completed 17-01-P01-PLAN.md (Wave 1 server)
 Resume file: None
 
-**Planned Phase:** 16 () — 0 plans — 2026-04-22T15:26:38.071Z
+**Planned Phase:** 17 () — 0 plans — 2026-04-23T01:11:23.880Z
