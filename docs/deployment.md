@@ -139,6 +139,84 @@ git pull && \
   docker compose -f docker/docker-compose.yml -f docker/docker-compose.tailscale.yml up -d
 ```
 
+## Deploying a public demo (Phase 26)
+
+A separate overlay, `docker/docker-compose.demo.yml`, stands up a public-facing ephemeral-data demo of HomeKeep. Every visitor gets their own throwaway user + home + 15 seed tasks on first load; data lives in tmpfs and is wiped after 2 hours of idle time OR 24 hours absolute, whichever comes first.
+
+This is **NOT** the mode to run your personal household on. For personal use, run the LAN or Tailscale overlays above.
+
+### What the overlay does
+
+- Swaps the baseline `./data:/app/data` bind-mount for a **tmpfs** volume (256 MB cap). PB state never touches disk.
+- Sets `DEMO_MODE=true`, which activates:
+  - `lib/demo-session.ts` — per-visitor ephemeral home seeding at `/api/demo/session`.
+  - `components/demo-banner.tsx` — the amber warning banner in the app layout.
+  - `pocketbase/pb_hooks/demo_cleanup.pb.js` — 15-minute cron that sweeps idle / absolute-TTL-expired demo users.
+- Sets `DISABLE_SCHEDULER=true` + `HK_BUILD_STEALTH=true` + `NTFY_URL=""` so the demo emits no outbound notifications and redacts build-id metadata.
+- Pins the image via `GHCR_OWNER` + `TAG` env vars (`conroyke56/latest` by default; `edge` during active dev).
+
+### Prereqs (`user_setup`)
+
+1. **DNS A record** for `homekeep.demo.kizz.space` → VPS IP (`46.62.151.57`). GoDaddy manual step for now; DNS-01 + godaddy plugin automation is deferred to v1.3.
+2. **Ports 80 + 443** open on the VPS firewall (ACME HTTP-01 on 80, HTTPS on 443, HTTP/3 on UDP 443).
+3. **`docker/.env.demo`** populated locally (the checked-in template is the starting point — you MUST rotate `PB_ADMIN_PASSWORD` via `openssl rand -hex 24` before `compose up` or the admin client fails fast).
+4. **Caddyfile swap**: by default the `docker-compose.caddy.yml` overlay mounts `Caddyfile.prod`. For the demo host, swap to `Caddyfile.demo` via an ad-hoc compose override (see below) or run a single demo instance where `DOMAIN=homekeep.demo.kizz.space` is set in `.env.demo` — Caddyfile.prod's `{$DOMAIN}` substitution works just as well for the demo host (the hostnames in the block are env-driven).
+
+### Start
+
+```bash
+# On the VPS, from the repo root:
+cp docker/.env.demo docker/.env.demo.local  # keep the template intact
+# edit docker/.env.demo.local and set PB_ADMIN_PASSWORD=$(openssl rand -hex 24)
+
+docker compose \
+  -f docker/docker-compose.yml \
+  -f docker/docker-compose.caddy.yml \
+  -f docker/docker-compose.demo.yml \
+  --env-file docker/.env.demo.local \
+  up -d
+```
+
+The first request to `https://homekeep.demo.kizz.space/api/demo/session` triggers:
+
+1. ACME HTTP-01 challenge on port 80 (Caddy auto-fetches a Let's Encrypt cert — ~15s on first run, persisted in the `caddy_data` volume).
+2. `lib/demo-session.ts` spawns a throwaway user + "Demo House" + Kitchen + Outdoor + Whole Home areas + 15 seed tasks.
+3. 303 redirect to `/h/<homeId>` with the user already authenticated.
+
+### Verify
+
+```bash
+# from anywhere — TLS should auto-negotiate within 15s of first hit:
+curl -sS https://homekeep.demo.kizz.space/api/health
+
+# first-visit flow returns a 303 to /h/<id>:
+curl -sSI https://homekeep.demo.kizz.space/api/demo/session
+```
+
+### Expected resource usage
+
+- tmpfs peak: ~50 MB for ~20 concurrent demo sessions (well under the 256 MB cap).
+- Cleanup cron runs every 15 min; the log line `[demo-cleanup] swept N demo users (M homes)` indicates it's working.
+- Admin UI (`/_/*`, `/api/_superusers/*`) is blocked at the edge with 404 (no escape hatch on the demo Caddyfile — Phase 22 HOTFIX-01 stays locked).
+
+### Tear down / reset the demo
+
+```bash
+docker compose \
+  -f docker/docker-compose.yml \
+  -f docker/docker-compose.caddy.yml \
+  -f docker/docker-compose.demo.yml \
+  down
+
+# Everything in tmpfs is already gone. The caddy_data volume (Let's
+# Encrypt cert + ACME key) stays — DO NOT delete it or you'll hit the
+# 5/wk LE rate limit on re-issuance.
+```
+
+### Don't run demo + personal on the same VPS
+
+The VPS `46.62.151.57` is a **public-demo host only** (per STATE.md v1.2-security Architecture Decision). The personal instance lives on the home-lab server behind Tailscale. Running both on the same VPS would share the `caddy_data` volume between hosts and accidentally expose the personal instance's admin UI if the Caddy config drifted.
+
 ## Release + tagging (INFR-09)
 
 HomeKeep ships multi-arch container images to GitHub Container Registry (GHCR) via `.github/workflows/release.yml`. The workflow is triggered by a git tag matching `v*` and publishes:
