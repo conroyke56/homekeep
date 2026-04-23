@@ -243,7 +243,7 @@ function extractHomeId(homeUrl: string): string {
 }
 
 test.describe('Phase 3 Core Loop (D-21)', () => {
-  test('Scenario 1 — early-completion guard fires -> accept -> moves out of This Week', async ({
+  test('Scenario 1 — early-completion guard fires -> accept -> completion persisted', async ({
     page,
     request,
   }) => {
@@ -289,17 +289,25 @@ test.describe('Phase 3 Core Loop (D-21)', () => {
       page.getByText(/Done — next due/),
     ).toBeVisible({ timeout: 5000 });
 
-    // Task moves out of This Week (new nextDue shifts ~7d forward).
-    await expect(
-      page.locator('[data-band="thisWeek"] [data-task-name="Wipe benches"]'),
-    ).toHaveCount(0);
+    // Phase 20 TEST-01 (D-03): Under LOAD, the task STAYS in thisWeek after
+    // completion — placeNextDue computes candidates in {T+5d, T+6d, T+7d}
+    // (all within band). Assert on flow evidence, not band exit.
+    // Band-transition semantics are already covered by
+    // tests/unit/band-classification.test.ts (21+ cases).
 
-    // Reload (fresh Server Component render) — state persists.
+    // Completion record persisted: count went 1 (seeded) → 2 (fresh).
+    const afterCount = await getCompletionCount(request, token, taskId);
+    expect(afterCount).toBe(2);
+
+    // Reload forces a fresh Server Component render (not router-cache replay)
+    // and confirms the BandView still renders without errors after the
+    // completion. Task is still somewhere on the page (thisWeek under LOAD,
+    // per D-03), but we don't assert a specific band — that's unit-tested.
     await page.goto(homeUrl);
     await expect(page.locator('[data-band-view]')).toBeVisible();
     await expect(
-      page.locator('[data-band="thisWeek"] [data-task-name="Wipe benches"]'),
-    ).toHaveCount(0);
+      page.locator('[data-task-name="Wipe benches"]'),
+    ).toBeVisible();
   });
 
   test('Scenario 2 — stale task in Overdue -> tap -> no guard -> moves out of Overdue', async ({
