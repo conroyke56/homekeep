@@ -252,7 +252,8 @@
 **: Action sheet includes a date picker defaulting to the natural next due
 - [x] **SNZE-03
 **: Action sheet has a "Just this time" / "From now on" radio (default: Just this time)
-- [ ] **SNZE-04**: New `schedule_overrides` PB collection stores one-off snoozes `(id, task_id, snooze_until, consumed_at, created)`
+- [x] **SNZE-04
+**: New `schedule_overrides` PB collection stores one-off snoozes `(id, task_id, snooze_until, consumed_at, created)`
 - [x] **SNZE-05
 **: computeNextDue consults the latest active (unconsumed) override BEFORE the smoothed-date branch (snooze trumps LOAD)
 - [x] **SNZE-06
