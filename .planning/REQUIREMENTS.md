@@ -667,13 +667,20 @@ These were noted as v1.1 in earlier planning but did NOT make it into the locked
 
 ### Code-Level Attack Surface (SEC) — injection, IDOR, hardening
 
-- [ ] **SEC-01**: All template-literal PB filters converted to `pb.filter('x = {:y}', { y })` parameterized form. Grep `filter: \`` across `app/**/*.{ts,tsx}` + `lib/**/*.ts` returns zero matches on non-parameterized patterns.
-- [ ] **SEC-02**: `schedule_overrides.createRule` amended to include `@request.body.created_by_id = @request.auth.id` (defense-in-depth body-check matching `completions.createRule`). Migration adds the rule update additively.
-- [ ] **SEC-03**: Admin scheduler token comparison upgraded from `!==` to `crypto.timingSafeEqual` in `app/api/admin/run-scheduler/route.ts`.
-- [ ] **SEC-04**: `updateTask` server action cross-verifies `area_id` belongs to same `home_id` as the existing task (matching `createTask` invariant).
-- [ ] **SEC-05**: `users.last_viewed_home_id` write-path validates `user IS member of home` (currently PB rule allows any authed user to set it to any home id).
-- [ ] **SEC-06**: Minimum password length raised 8 → 12 in `lib/schemas/auth.ts` zod schema; existing users grandfathered (no forced-reset).
-- [ ] **SEC-07**: `proxy.ts` middleware adds token-refresh round-trip on authed navigations (not just cookie-presence check). Matches JSDoc claim at `app/(public)/invite/[token]/page.tsx:27-30`.
+- [x] **SEC-01
+**: All template-literal PB filters converted to `pb.filter('x = {:y}', { y })` parameterized form. Grep `filter: \`` across `app/**/*.{ts,tsx}` + `lib/**/*.ts` returns zero matches on non-parameterized patterns.
+- [x] **SEC-02
+**: `schedule_overrides.createRule` amended to include `@request.body.created_by_id = @request.auth.id` (defense-in-depth body-check matching `completions.createRule`). Migration adds the rule update additively.
+- [x] **SEC-03
+**: Admin scheduler token comparison upgraded from `!==` to `crypto.timingSafeEqual` in `app/api/admin/run-scheduler/route.ts`.
+- [x] **SEC-04
+**: `updateTask` server action cross-verifies `area_id` belongs to same `home_id` as the existing task (matching `createTask` invariant).
+- [x] **SEC-05
+**: `users.last_viewed_home_id` write-path validates `user IS member of home` (currently PB rule allows any authed user to set it to any home id).
+- [x] **SEC-06
+**: Minimum password length raised 8 → 12 in `lib/schemas/auth.ts` zod schema; existing users grandfathered (no forced-reset).
+- [x] **SEC-07
+**: `proxy.ts` middleware adds token-refresh round-trip on authed navigations (not just cookie-presence check). Matches JSDoc claim at `app/(public)/invite/[token]/page.tsx:27-30`.
 
 ### HTTP Headers + Transport (HDR)
 
