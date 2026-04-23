@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Scheduling & Flexibility
 status: verifying
-stopped_at: Completed 21-01-P01-PLAN.md — INFR-03 bump 300→320MB (INFRA-BUMP-01 closed pending post-push CI green)
-last_updated: "2026-04-23T13:17:41.098Z"
+stopped_at: Completed 24-01-P01-PLAN.md — HDR-01..04 shipped (CSP-Report-Only + HSTS + build-id stealth)
+last_updated: "2026-04-23T21:47:31.428Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 19
@@ -117,6 +117,7 @@ Progress: [██████████] 100%
 | Phase 17 P02 | ~14min | 2 tasks | 6 files |
 | Phase Phase 20 PP01 | 12min | 3 tasks | 1 files |
 | Phase 21 P01 | 8 | 1 tasks | 4 files |
+| Phase 24 P01-P01 | 20min | 4 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -332,6 +333,11 @@ Recent decisions affecting current work:
 - Phase 20 TEST-01: Adopted Option C (flow-assertions) for core-loop E2E — band-transition assertions are brittle under LOAD's ±tolerance + load-map scoring; flow evidence (dialog visibility + toast + PB REST count delta) is the stable contract
 - Phase 20 TEST-01: seedCompletion uses POST-then-PATCH with next_due_smoothed='' + reschedule_marker='' to escape computeNextDue's smoothed-branch shadow (Phase 12 LOAD + Phase 13 TCSEM interaction)
 - 21-01: INFR-03 budget raised 300MB → 320MB (v1.1 policy — absorbs ~9MB shadcn+radix+pb growth; docker-layer optimization deferred to v1.2)
+- 24-01: CSP ships as Report-Only for 30-day soak; Phase 28 flips to enforced
+- 24-01: HSTS conditional on SITE_URL https:// — plain-HTTP LAN deploys unaffected
+- 24-01: Triple-layer headers (Next + internal Caddy + external Caddy) — defense-in-depth
+- 24-01: HK_BUILD_STEALTH gate applies to header + meta + .well-known (Rule 2 expansion) — all public build-id surfaces redacted uniformly
+- 24-01: getBuildIdPublic() is a function not a const — per-call env read, no rebuild needed to flip stealth
 
 ### Pending Todos
 
@@ -357,8 +363,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-23T13:17:41.075Z
-Stopped at: Completed 21-01-P01-PLAN.md — INFR-03 bump 300→320MB (INFRA-BUMP-01 closed pending post-push CI green)
+Last session: 2026-04-23T21:47:31.409Z
+Stopped at: Completed 24-01-P01-PLAN.md — HDR-01..04 shipped (CSP-Report-Only + HSTS + build-id stealth)
 Resume file: None
 
 **Planned Phase:** 17 () — 0 plans — 2026-04-23T01:11:23.880Z
@@ -370,6 +376,7 @@ Resume file: None
 **Rationale:** Running the user's real household data on the same public VPS that strangers probe is not safe regardless of hardening level. The `docker-compose.tailscale.yml` overlay already exists (Phase 7) — that's the target for the personal instance. The VPS gets reconfigured to host only the demo after Phase 26 ships.
 
 **Immediate impact:**
+
 - Phase 22 hotfix still runs as planned (hardens BOTH the current VPS AND the future demo image)
 - Phase 26 becomes the "turn VPS into demo-only" transition phase, not just an optional demo pattern
 - Add post-Phase-28 migration step: tear down current VPS container, redeploy as demo, stand up personal instance on Tailscale network
@@ -389,6 +396,7 @@ Resume file: None
 **Cert strategy:** Caddy `Caddyfile.prod` already does Let's Encrypt via HTTP-01 on port 80. DNS-01 via godaddy provider is nicer (no port 80 requirement, wildcard support) — library: `caddy-dns/godaddy` community plugin. Add to Dockerfile's caddy build or use a Caddy-with-plugins image variant. Evaluate during Phase 26 planning.
 
 **Updates Phase 26 success criteria:**
+
 - SC previously: "`docker-compose.demo.yml` overlay boots a demo instance"
 - SC now: "Public demo live at `demo.kizz.space` via auto-TLS; personal instance moved to `homekeep.kizz.space` behind Tailscale/auth; godaddy A records created (manual or API-automated)"
 

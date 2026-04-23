@@ -684,10 +684,14 @@ These were noted as v1.1 in earlier planning but did NOT make it into the locked
 
 ### HTTP Headers + Transport (HDR)
 
-- [ ] **HDR-01**: `next.config.ts` exports `headers()` with CSP (Report-Only initially for 30 days), HSTS (max-age 31536000, includeSubDomains, preload), X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy (geolocation/camera/microphone disabled).
-- [ ] **HDR-02**: `Caddyfile.prod` mirrors headers at edge (defense-in-depth when Caddy terminates TLS). LAN `Caddyfile` adds the non-HSTS subset.
-- [ ] **HDR-03**: CSP Report-Only endpoint accepts violation reports to `/api/csp-report` (server-side log only, no DB write, no PII); after 30-day soak, Report-Only flipped to enforced.
-- [ ] **HDR-04**: `HK_BUILD_ID` response header stripped on demo + public deployments (env flag `HK_BUILD_STEALTH=true` redacts to "hk-hidden").
+- [x] **HDR-01
+**: `next.config.ts` exports `headers()` with CSP (Report-Only initially for 30 days), HSTS (max-age 31536000, includeSubDomains, preload), X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy (geolocation/camera/microphone disabled).
+- [x] **HDR-02
+**: `Caddyfile.prod` mirrors headers at edge (defense-in-depth when Caddy terminates TLS). LAN `Caddyfile` adds the non-HSTS subset.
+- [x] **HDR-03
+**: CSP Report-Only endpoint accepts violation reports to `/api/csp-report` (server-side log only, no DB write, no PII); after 30-day soak, Report-Only flipped to enforced.
+- [x] **HDR-04
+**: `HK_BUILD_ID` response header stripped on demo + public deployments (env flag `HK_BUILD_STEALTH=true` redacts to "hk-hidden").
 
 ### Rate Limits + Abuse Prevention (RATE)
 
