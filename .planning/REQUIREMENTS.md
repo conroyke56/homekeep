@@ -184,7 +184,7 @@
 - [x] **INFR-11
 **: `.env.example` with structure, real `.env` git-ignored
 - [x] **INFR-12
-**: MIT license, public GitHub repo
+**: AGPL-3.0-or-later license, public GitHub repo
 
 ## v1.1 Requirements (Scheduling & Flexibility)
 
@@ -346,12 +346,18 @@
 
 > **Updated per addendum:** SPEC.md bumps to **v0.4** (not v0.3) because the addendum changes the spec materially — household load smoothing is a new architectural commitment.
 
-- [ ] **DOCS-01**: SPEC.md bumped to v0.4
-- [ ] **DOCS-02**: SPEC.md three stale "MIT" references corrected to AGPL-3.0
-- [ ] **DOCS-03**: SPEC.md gains a v1.1 changelog section documenting all new features (LOAD, LVIZ, TCSEM, REBAL, OOFT, PREF, SEAS, SNZE) and data-model changes (`tasks.next_due_smoothed`, `tasks.preferred_days`, `tasks.active_from_month`/`to_month`, nullable `tasks.frequency_days`, `schedule_overrides` collection)
-- [ ] **DOCS-04**: PROJECT.md `INFR-12` corrected to AGPL-3.0
-- [ ] **DOCS-05**: SPEC.md documents the new task fields, the `schedule_overrides` collection, the LOAD placement algorithm (tolerance window, tiebreakers, forward-only), and REBAL semantics
-- [ ] **DOCS-06**: PROJECT.md "No SMTP" constraint reworded to "SMTP optional, never required"
+- [x] **DOCS-01
+**: SPEC.md bumped to v0.4
+- [x] **DOCS-02
+**: SPEC.md three stale "MIT" references corrected to AGPL-3.0
+- [x] **DOCS-03
+**: SPEC.md gains a v1.1 changelog section documenting all new features (LOAD, LVIZ, TCSEM, REBAL, OOFT, PREF, SEAS, SNZE) and data-model changes (`tasks.next_due_smoothed`, `tasks.preferred_days`, `tasks.active_from_month`/`to_month`, nullable `tasks.frequency_days`, `schedule_overrides` collection)
+- [x] **DOCS-04
+**: PROJECT.md `INFR-12` corrected to AGPL-3.0
+- [x] **DOCS-05
+**: SPEC.md documents the new task fields, the `schedule_overrides` collection, the LOAD placement algorithm (tolerance window, tiebreakers, forward-only), and REBAL semantics
+- [x] **DOCS-06
+**: PROJECT.md "No SMTP" constraint reworded to "SMTP optional, never required"
 
 ## v1.2+ Candidates (deferred)
 

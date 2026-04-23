@@ -1,8 +1,8 @@
 # HomeKeep — Product Specification
 
-**Version:** 0.2 (pre-build)
-**Status:** Draft for GSD intake
-**License:** MIT
+**Version:** 0.4 (v1.1 Scheduling & Flexibility)
+**Status:** Release-ready for v1.1.0-rc1
+**License:** AGPL-3.0-or-later
 
 ---
 
@@ -457,7 +457,7 @@ homekeep/
 │   ├── docker-compose.tailscale.yml # + Tailscale sidecar
 │   └── Caddyfile.example
 ├── .env.example
-├── LICENSE                     # MIT
+├── LICENSE                     # AGPL-3.0-or-later
 ├── README.md
 ├── DEPLOYMENT.md               # per-platform recipes
 └── SPEC.md                     # this file
@@ -513,7 +513,7 @@ Explicit list of what we are NOT doing in v1:
 6. Stop containers, back up `./data`, delete everything, restore folder, start containers. All state intact.
 7. Coverage ring math correct (spot-check with manually calculated scenarios).
 8. Pi 4 (8GB) can run it comfortably for a single-home deployment.
-9. Public GitHub repo, MIT license, published Docker image, working GitHub Actions release pipeline.
+9. Public GitHub repo, AGPL-3.0-or-later license, published Docker image, working GitHub Actions release pipeline.
 
 ## 19. Design direction (for UI/UX Pro Max skill)
 
@@ -566,6 +566,78 @@ Caddy compose, Tailscale compose, README, DEPLOYMENT.md, multi-arch CI, first ta
 
 ## Changelog
 
-**v0.2** — Added cascading assignment model (task → area → anyone). Renamed "rooms" to "areas" with scope (location vs. whole_home). Auto-created Whole Home area per home. Added completion model with early-completion guard (cycle vs. anchored modes). Added By Area, Person, History dashboards. Added API tier plan (PocketBase v1, documented + webhooks v1.1, MCP v2). Parked kids/chores mode as v1.2+. Added optional area groups for v1.1. Added rotation toggle for v1.1.
+### v0.4 — v1.1 Scheduling & Flexibility (2026-04-22)
 
-**v0.1** — Initial spec.
+Material spec bump (v0.3→v0.4) because the LOAD addendum changes the scheduling thesis. Ships as `v1.1.0-rc1`. All v1.1 migrations are additive; v1.0 installs upgrading via `:1` or `:latest` lose no data. Anchored-mode tasks remain byte-identical to v1.0 (the explicit opt-out from smoothing).
+
+**Data model (Phases 10, 11, 12, 15):**
+- `tasks.frequency_days` is now nullable (previously required) — enables one-off (OOFT) tasks
+- `tasks.due_date DATE NULL` — explicit due date for one-off tasks (required when `frequency_days IS NULL`)
+- `tasks.preferred_days` (nullable enum `any | weekend | weekday`) — hard narrowing constraint on placement
+- `tasks.active_from_month INT? (1..12)` + `tasks.active_to_month INT? (1..12)` — seasonal active window; both null = year-round; cross-year wrap supported (e.g. Oct-Mar means Oct through March inclusive)
+- `tasks.next_due_smoothed DATE NULL` — LOAD smoother's chosen date; null falls back to natural cadence
+- `tasks.reschedule_marker TIMESTAMP NULL` — set by SNZE "From now on"; REBAL reads it to preserve the task; cleared on rebalance apply
+- New `schedule_overrides` collection `(id, task_id, snooze_until, consumed_at, created)` — per-task snooze history with member-gated rules and atomic consumption on completion
+
+**Scheduler — `computeNextDue` 6-branch composition (documented order):**
+1. Archived → `null`
+2. Override (Phase 10) → `override.snooze_until` when active + unconsumed + `snooze_until > lastCompletion.completed_at` (D-10 read-time filter)
+3. Smoothed (Phase 12) → `next_due_smoothed` when set AND task not anchored AND not about to wake from seasonal dormancy
+4. Seasonal-dormant (Phase 11) → `null` when task has active window AND current month is outside it AND lastCompletion is in the current/recent season
+5. Seasonal-wakeup (Phase 11) → `nextWindowOpenDate(now, from, to, tz)` when waking up (no completion OR prior-season completion)
+6. OOFT (Phase 11) → `task.due_date` if no completion, else `null` (completed OOFT is atomically archived)
+7. Natural cycle/anchored — existing v1.0 behavior for cycle tasks (`lastCompletion + frequency_days`) or anchored tasks (`anchor_date + k × frequency_days`)
+
+**LOAD placement algorithm (Phase 12, REQ LOAD-01..15):**
+- Pure helpers `placeNextDue(task, householdLoad, now, opts)` and `computeHouseholdLoad(tasks, now, windowDays): Map<ISODate, number>` in `lib/load-smoothing.ts`
+- Tolerance window: `min(0.15 × frequency_days, 5)` days each side of natural ideal (rider 1: validated against 30-task household; ships at 5-day cap)
+- Pipeline: generate candidates (natural_ideal ± tolerance) → apply `narrowToPreferredDays` (hard PREF constraint) → if empty, widen forward +1..+6 days → score by load map → pick by tiebreakers
+- Tiebreakers: lowest `householdLoad[date]` → closest-to-ideal → earliest (fully ordered, deterministic)
+- Forward-only contract: `placeNextDue` returns a Date for the argument task ONLY; no other task's `next_due_smoothed` mutated. Sibling convergence is eventual (on their own next completion)
+- Anchored tasks bypass smoothing entirely (LOAD-06) but still contribute to the household load map for other tasks' placement
+- OOFT tasks contribute `1` to the load map on their `due_date` but their own `next_due_smoothed` is never written (LOAD-09)
+- Smoother runs on task creation (Phase 13 TCSEM) AND on task completion (Phase 12); each invocation is a single atomic `pb.createBatch`
+- Performance budget: single placement < 100ms for 100-task household (observed 4ms; 25× headroom)
+
+**Task creation semantics (Phase 13, TCSEM-01..07):**
+- Task form "Advanced" collapsible surfaces optional "Last done" date; smart defaults otherwise (≤7d → tomorrow; 8-90d → cycle/4; >90d → cycle/3)
+- `createTaskAction` computes first_ideal → places via LOAD → writes `next_due_smoothed` atomically in the same batch as the task row
+- `batchCreateSeedTasks` threads an in-memory load Map between seeds so a cohort of onboarding seeds distributes naturally
+- SDST (seed-stagger via synthetic completions) removed entirely — replaced by TCSEM
+
+**Snooze & permanent reschedule (Phase 10 + 15, SNZE-01..10):**
+- `<RescheduleActionSheet>` opens from BandView / PersonTaskList / TaskDetailSheet; date picker defaults to natural next due; radio toggles "Just this time" / "From now on"
+- "Just this time" → writes `schedule_overrides` row (Phase 10 atomic-replace-active: second writer consumes predecessor in same batch). Consumption happens at completion atomically.
+- "From now on" → mutates `tasks.anchor_date` (anchored mode) or `tasks.next_due_smoothed` (cycle mode) with `reschedule_marker = now`. No override row written.
+- `<ExtendWindowDialog>` warns when snooze date lands outside the task's active seasonal window — user picks Cancel / Extend / Continue anyway
+
+**Seasonal UI (Phase 14, SEAS-06..10):**
+- Task form "Active months" subsection (from/to month dropdowns) with paired-or-null validation
+- Anchored-warning Alert when >50% of projected cycles fall outside the active window (non-blocking)
+- Dormant tasks render dimmed with "Sleeps until `MMM yyyy`" badge in BandView / PersonTaskList / By Area; rows are silent no-op on tap
+- Coverage ring excludes dormant tasks from its mean (SEAS-05)
+- History view shows completions regardless of current dormancy state (SEAS-10)
+- Seed library extends with 2 seasonal pairs (mowing warm/cool; HVAC summer/winter)
+
+**Horizon density visualization (Phase 16, LVIZ-01..05):**
+- HorizonStrip month cells render density tint (`bg-primary/10`, `/30`, `/50`) scaling with per-month task count
+- `<ShiftBadge>` (⚖️ emoji + tooltip) appears on any task whose `next_due_smoothed` differs from its natural ideal by ≥1 day
+- TaskDetailSheet "Schedule" section shows Ideal vs Scheduled dates side-by-side when displaced; hidden when equal
+
+**Manual rebalance (Phase 17, REBAL-01..07):**
+- Settings → Scheduling → "Rebalance schedule" button opens a counts-only preview Dialog
+- 4-bucket classifier (priority: anchored > active-override > from-now-on marker > rebalanceable)
+- Apply: fresh `computeHouseholdLoad` → re-place rebalanceable bucket in ascending ideal-date order, threading the in-memory load map between placements; clear `reschedule_marker` on from-now-on bucket after preservation; single atomic `pb.createBatch`
+- Second consecutive rebalance is a no-op on date values (deterministic, stable)
+
+**Documentation (Phase 18):**
+- License corrected MIT → AGPL-3.0-or-later throughout SPEC.md and PROJECT.md
+- This changelog section
+
+### v0.2
+
+Added cascading assignment model (task → area → anyone). Renamed "rooms" to "areas" with scope (location vs. whole_home). Auto-created Whole Home area per home. Added completion model with early-completion guard (cycle vs. anchored modes). Added By Area, Person, History dashboards. Added API tier plan (PocketBase v1, documented + webhooks v1.1, MCP v2). Parked kids/chores mode as v1.2+. Added optional area groups for v1.1. Added rotation toggle for v1.1.
+
+### v0.1
+
+Initial spec.
