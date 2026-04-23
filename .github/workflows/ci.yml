@@ -35,6 +35,26 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      # Integration tests under tests/unit/*-integration.test.ts spawn disposable
+      # PocketBase instances against .pb/pocketbase. The binary is gitignored (31MB)
+      # and dev-pb.js downloads it on first local run; CI needs the same step.
+      - name: Cache PocketBase binary
+        uses: actions/cache@v4
+        with:
+          path: .pb/pocketbase
+          key: pocketbase-0.37.1-${{ runner.os }}-${{ runner.arch }}
+      - name: Setup PocketBase
+        run: |
+          if [ ! -x .pb/pocketbase ]; then
+            mkdir -p .pb
+            PB_VERSION=0.37.1
+            ARCH=$([ "$(uname -m)" = "aarch64" ] && echo arm64 || echo amd64)
+            curl -sSL "https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_${ARCH}.zip" -o .pb/pb.zip
+            unzip -o .pb/pb.zip -d .pb/
+            chmod +x .pb/pocketbase
+          fi
+          .pb/pocketbase --version
+
       - name: Unit tests
         run: npm run test
 
