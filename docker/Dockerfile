@@ -31,6 +31,9 @@ RUN npm ci --no-audit --no-fund
 ############################################
 FROM node:${NODE_VERSION}@${NODE_DIGEST} AS builder
 WORKDIR /app
+# SUPPLY-06: disable Next.js telemetry during the build so `next build` in CI
+# does not phone home to telemetry.nextjs.org.
+ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
@@ -113,7 +116,8 @@ ENV NODE_ENV=production \
     S6_KEEP_ENV=1 \
     S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
     S6_VERBOSITY=1 \
-    HK_BUILD_ID=${HK_BUILD_ID}
+    HK_BUILD_ID=${HK_BUILD_ID} \
+    NEXT_TELEMETRY_DISABLED=1
 
 # OCI label surfaces the build fingerprint via `docker inspect` even if the
 # container is offline. Matches HOMEKEEP_BUILD at runtime.
