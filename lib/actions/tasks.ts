@@ -6,6 +6,7 @@ import { addDays } from 'date-fns';
 import { createServerClient } from '@/lib/pocketbase-server';
 import { createAdminClient } from '@/lib/pocketbase-admin';
 import { assertMembership } from '@/lib/membership';
+import { assertTasksQuota } from '@/lib/quotas';
 import { taskSchema } from '@/lib/schemas/task';
 import type { ActionState } from '@/lib/schemas/auth';
 import {
@@ -157,6 +158,12 @@ export async function createTask(
     await assertMembership(pb, parsed.data.home_id);
   } catch {
     return { ok: false, formError: 'You are not a member of this home' };
+  }
+
+  // Phase 25 RATE-01: per-home task quota. See lib/quotas.ts.
+  const quota = await assertTasksQuota(pb, parsed.data.home_id);
+  if (!quota.ok) {
+    return { ok: false, formError: quota.reason };
   }
 
   try {

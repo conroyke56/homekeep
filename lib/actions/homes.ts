@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/lib/pocketbase-server';
 import { assertMembership, assertOwnership } from '@/lib/membership';
+import { assertHomesQuota } from '@/lib/quotas';
 import { homeSchema } from '@/lib/schemas/home';
 import type { ActionState } from '@/lib/schemas/auth';
 
@@ -52,6 +53,14 @@ export async function createHome(
     return { ok: false, formError: 'Not signed in' };
   }
   const authId = pb.authStore.record.id;
+
+  // Phase 25 RATE-01: per-owner home quota. See lib/quotas.ts for the
+  // full deviation note on why this lives at the action layer rather
+  // than a PB JSVM hook.
+  const quota = await assertHomesQuota(pb, authId);
+  if (!quota.ok) {
+    return { ok: false, formError: quota.reason };
+  }
 
   let homeId: string;
   try {

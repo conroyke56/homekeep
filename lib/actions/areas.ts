@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createServerClient } from '@/lib/pocketbase-server';
 import { assertMembership } from '@/lib/membership';
+import { assertAreasQuota } from '@/lib/quotas';
 import { areaSchema } from '@/lib/schemas/area';
 import type { ActionState } from '@/lib/schemas/auth';
 import { AREA_COLORS, AREA_ICONS } from '@/lib/area-palette';
@@ -71,6 +72,12 @@ export async function createArea(
     await assertMembership(pb, parsed.data.home_id);
   } catch {
     return { ok: false, formError: 'You are not a member of this home' };
+  }
+
+  // Phase 25 RATE-01: per-home area quota. See lib/quotas.ts.
+  const quota = await assertAreasQuota(pb, parsed.data.home_id);
+  if (!quota.ok) {
+    return { ok: false, formError: quota.reason };
   }
 
   try {
