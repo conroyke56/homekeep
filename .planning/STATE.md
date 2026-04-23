@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Scheduling & Flexibility
-status: executing
-stopped_at: Completed 17-01-P01-PLAN.md (Wave 1 server)
-last_updated: "2026-04-23T01:43:07.640Z"
+status: verifying
+stopped_at: Completed 17-02-P01-PLAN.md (Phase 17 Wave 2 UI + integration — all 7 REBAL REQs closed)
+last_updated: "2026-04-23T02:21:43.038Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 19
-  completed_phases: 14
+  completed_phases: 15
   total_plans: 46
-  completed_plans: 48
+  completed_plans: 49
   percent: 100
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 Phase: 17 (Manual Rebalance) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-23
 
 Progress: [██████████] 100%
@@ -114,6 +114,7 @@ Progress: [██████████] 100%
 | Phase 15 P03 | ~4min | 1 tasks | 1 files |
 | Phase 16 P01 | 40 | 5 tasks | 16 files |
 | Phase 17 P01 | ~20min | 2 tasks | 4 files |
+| Phase 17 P02 | ~14min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -323,6 +324,9 @@ Recent decisions affecting current work:
 - 17-01: fetch-and-classify shared preamble between preview/apply (avoids drift on the read-heavy auth+membership+projection+classifier path)
 - 17-01: marker clear uses null (Phase 15 convention); batch skips send() when empty to avoid no-op PB roundtrip
 - 17-01: deterministic mock placeNextDue for action tests + vi.importActual REAL placeNextDue for A2 threading proof
+- Phase 17 Plan 17-02 Scenario 3 reformulated from 2-run to 3-run idempotency proof — D-06 marker-clear legitimately shifts cohort placements between Run 1 and Run 2, so idempotency must be verified Run 2 vs Run 3 (stable rebalanceable set)
+- Cancel button label flips Cancel↔Close in RebalanceDialog based on update_count=0 empty state — small UX lift preserving semantic consistency of the remaining button
+- Radix Dialog jsdom polyfill stack cataloged in tests/unit/rebalance-dialog.test.tsx: matchMedia + ResizeObserver + hasPointerCapture + scrollIntoView — canonical reference for future 'use client' Dialog tests
 
 ### Pending Todos
 
@@ -348,8 +352,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-23T01:43:07.624Z
-Stopped at: Completed 17-01-P01-PLAN.md (Wave 1 server)
+Last session: 2026-04-23T02:21:43.020Z
+Stopped at: Completed 17-02-P01-PLAN.md (Phase 17 Wave 2 UI + integration — all 7 REBAL REQs closed)
 Resume file: None
 
 **Planned Phase:** 17 () — 0 plans — 2026-04-23T01:11:23.880Z

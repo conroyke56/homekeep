@@ -335,8 +335,10 @@
 ; preservation enforced here)
 - [x] **REBAL-04
 **: All other tasks re-run through `placeNextDue` with a fresh `computeHouseholdLoad` map
-- [ ] **REBAL-05**: Settings → Scheduling → "Rebalance schedule" button surfaces the action
-- [ ] **REBAL-06**: Preview modal shows counts only — "Will update: N" + "Will preserve: M" with breakdown by preservation reason (anchored / active snooze / "From now on")
+- [x] **REBAL-05
+**: Settings → Scheduling → "Rebalance schedule" button surfaces the action
+- [x] **REBAL-06
+**: Preview modal shows counts only — "Will update: N" + "Will preserve: M" with breakdown by preservation reason (anchored / active snooze / "From now on")
 - [x] **REBAL-07
 **: Re-placement processes the bucket-4 residual in ascending ideal-date order, updating in-memory load map between placements (deterministic, matches TCSEM batch pattern)
 
