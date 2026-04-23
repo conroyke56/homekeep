@@ -55,8 +55,16 @@ export default async function HomeSettingsPage({
 
   // PB empty-date filter uses the empty string. Owner can list invites
   // for their home (invites.listRule is owner-only).
+  //
+  // Phase 17 WR-01: homeId traces to Next.js routing (typed params) so
+  // the prior template-literal filter was never exploitable, but the
+  // pb.filter() parameter-binding pattern matches the rest of the
+  // codebase (lib/actions/rebalance.ts, lib/membership.ts) and is the
+  // "safe filter" convention per 02-04 anti-SQLi. Defense-in-depth.
   const pendingInvitesRaw = await pb.collection('invites').getFullList({
-    filter: `home_id = "${homeId}" && accepted_at = ""`,
+    filter: pb.filter('home_id = {:hid} && accepted_at = ""', {
+      hid: homeId,
+    }),
     sort: '-created',
     fields: 'id,token,expires_at,created',
   });
