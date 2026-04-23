@@ -100,12 +100,15 @@ test('multiple homes + last-viewed persistence (HOME-03 / HOME-04)', async ({
   const pw = 'password123';
   await signup(page, email, pw);
 
-  // Phase 3 replaced the home-page heading with the BandView — the home
-  // name now surfaces via the HomeSwitcher button in the banner. Use that
-  // as the visibility probe for "currently on this home".
+  // Phase 9 hides the HomeSwitcher when the user has a single home — the
+  // home name is carried by the page h1 instead. Once a second home
+  // exists the switcher reappears, so the probes split: h1 for the
+  // single-home phase, banner-switcher for the multi-home phase.
   const header = page.getByRole('banner');
   const switcherFor = (name: RegExp) =>
     header.getByRole('button', { name });
+  const h1For = (name: RegExp) =>
+    page.getByRole('heading', { level: 1, name });
 
   // First home
   await page.click('text=Create your first home');
@@ -115,12 +118,14 @@ test('multiple homes + last-viewed persistence (HOME-03 / HOME-04)', async ({
   await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/onboarding$/);
   await skipOnboardingIfPresent(page);
   await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}$/);
-  await expect(switcherFor(/House A/)).toBeVisible();
+  // Single-home: switcher is null, h1 carries the name.
+  await expect(h1For(/House A/)).toBeVisible();
 
-  // Switcher in the header now shows "House A" (once fresh user record is
-  // re-fetched post-redirect). Open it via the banner's switcher button.
-  await switcherFor(/House A/).click();
-  await page.getByRole('menuitem', { name: /Create another home/ }).click();
+  // Phase 9 relocated the second-home entry point: the HomeSwitcher
+  // dropdown no longer renders for single-home users, and AccountMenu
+  // does not expose a "Create another home" item. Navigate straight to
+  // /h/new which is the route all entry points funnel to anyway.
+  await page.goto('/h/new');
   await expect(page).toHaveURL(/\/h\/new/);
   await page.fill('[name=name]', 'House B');
   await page.click('button[type=submit]');
@@ -128,6 +133,7 @@ test('multiple homes + last-viewed persistence (HOME-03 / HOME-04)', async ({
   await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}\/onboarding$/);
   await skipOnboardingIfPresent(page);
   await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}$/);
+  // Two homes now — switcher is back, showing the current (House B).
   await expect(switcherFor(/House B/)).toBeVisible();
 
   // Switch back to House A via the HomeSwitcher dropdown. 04-03 added
@@ -147,7 +153,8 @@ test('multiple homes + last-viewed persistence (HOME-03 / HOME-04)', async ({
   await page.fill('[name=password]', pw);
   await page.click('button[type=submit]');
 
-  // HOME-03: /h redirects to /h/[lastViewedId] which is House A.
+  // HOME-03: /h redirects to /h/[lastViewedId] which is House A. The
+  // user still has 2 homes, so the switcher remains visible.
   await expect(page).toHaveURL(/\/h\/[a-z0-9]{15}$/);
   await expect(switcherFor(/House A/)).toBeVisible();
 });
