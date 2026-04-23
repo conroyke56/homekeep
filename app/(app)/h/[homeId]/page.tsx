@@ -10,6 +10,7 @@ import { HouseholdStreakBadge } from '@/components/household-streak-badge';
 import { computeHouseholdStreak } from '@/lib/household-streak';
 import { resolveAssignee, type Member } from '@/lib/assignment';
 import { getActiveOverridesForHome } from '@/lib/schedule-overrides';
+import { normalizeMonth } from '@/lib/task-scheduling';
 
 /**
  * /h/[homeId] — Phase 3 three-band dashboard (D-11, D-18, D-19).
@@ -162,8 +163,11 @@ export default async function HomeDashboardPage({
         )?.area_id?.name ?? undefined,
       notes: (t.notes as string) ?? '',
       assigned_to_id: assignedToId,
-      active_from_month: (t.active_from_month as number) ?? null,
-      active_to_month: (t.active_to_month as number) ?? null,
+      // Phase 19 PATCH-01: normalizeMonth collapses PB 0.37.1
+      // cleared-NumberField=0 to null so year-round semantics stay
+      // consistent between never-set (null) and cleared (0) rows.
+      active_from_month: normalizeMonth(t.active_from_month),
+      active_to_month: normalizeMonth(t.active_to_month),
       // Phase 16 Plan 01 (LVIZ-03, LVIZ-05): defensive `?? null` on each
       // new optional field — PB 0.37.1 returns '' for empty DateField /
       // empty NumberField-as-string, so a blanket null coercion keeps

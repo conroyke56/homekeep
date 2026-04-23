@@ -13,7 +13,7 @@ import {
 } from '@/lib/area-coverage';
 import { AreaCard } from '@/components/area-card';
 import { DormantTaskRow } from '@/components/dormant-task-row';
-import type { Task } from '@/lib/task-scheduling';
+import { type Task, normalizeMonth } from '@/lib/task-scheduling';
 import { classifyDormantTasks } from '@/lib/seasonal-rendering';
 import { getActiveOverridesForHome } from '@/lib/schedule-overrides';
 
@@ -105,8 +105,10 @@ export default async function ByAreaPage({
       // paired ints = dormant outside [from..to] per SEAS-02. Surfaces
       // below (the home-level Sleeping rollup) classify these via
       // classifyDormantTasks.
-      active_from_month: (t.active_from_month as number | null) ?? null,
-      active_to_month: (t.active_to_month as number | null) ?? null,
+      // Phase 19 PATCH-01: normalizeMonth collapses PB 0.37.1
+      // cleared-NumberField=0 to null (year-round parity).
+      active_from_month: normalizeMonth(t.active_from_month),
+      active_to_month: normalizeMonth(t.active_to_month),
     });
   }
 
@@ -164,8 +166,9 @@ export default async function ByAreaPage({
           ? ('anchored' as const)
           : ('cycle' as const),
       anchor_date: (t.anchor_date as string) || null,
-      active_from_month: (t.active_from_month as number | null) ?? null,
-      active_to_month: (t.active_to_month as number | null) ?? null,
+      // Phase 19 PATCH-01: normalizeMonth — see first occurrence above.
+      active_from_month: normalizeMonth(t.active_from_month),
+      active_to_month: normalizeMonth(t.active_to_month),
     }));
   const dormant = classifyDormantTasks(allTasksForDormant, now, timezone);
 

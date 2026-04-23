@@ -1,6 +1,10 @@
 import { describe, test, expect } from 'vitest';
 import { addDays } from 'date-fns';
-import { computeNextDue, type Task } from '@/lib/task-scheduling';
+import {
+  computeNextDue,
+  normalizeMonth,
+  type Task,
+} from '@/lib/task-scheduling';
 import {
   computeHouseholdLoad,
   placeNextDue,
@@ -1076,5 +1080,56 @@ describe('branch composition matrix — LOAD-15 hard gate', () => {
     const completedAt = new Date('2026-04-29T00:00:00.000Z');
     expect(completedAt.getUTCDay()).toBe(3); // Wednesday
     expect(addDays(completedAt, 7).getUTCDay()).toBe(3); // May 6 also Wed
+  });
+
+  // ─── Phase 19 PATCH-01 regression — 0-vs-null storage reality ──────
+  //
+  // PB 0.37.1 round-trips a cleared NumberField as `0` on the wire.
+  // Without normalizeMonth, (0, 0) diverges from (null, null) silently:
+  // hasWindow evaluates true (0 != null), the seasonal branch fires
+  // isInActiveWindow(month, 0, 0) which (pre-patch) returned
+  // `month >= 0 && month <= 0` = false for every real month → the
+  // task renders as same-season dormant (null) instead of year-round.
+
+  test('Case 22 (PATCH-01): active_from=0, active_to=0 → natural cadence (fresh)', () => {
+    const task = makeBranchTask({
+      active_from_month: 0,
+      active_to_month: 0,
+      frequency_days: 7,
+    });
+    const result = computeNextDue(task, null, NOW, undefined, TZ);
+    // base = task.created (2026-04-01) + 7 → 2026-04-08.
+    expect(result?.toISOString()).toBe('2026-04-08T00:00:00.000Z');
+  });
+});
+
+// ─── Phase 19 PATCH-01 — normalizeMonth helper unit coverage ───────
+describe('normalizeMonth helper (Phase 19 PATCH-01)', () => {
+  test('0 → null (PB cleared-NumberField storage reality)', () => {
+    expect(normalizeMonth(0)).toBeNull();
+  });
+  test('-1 → null (out of range low)', () => {
+    expect(normalizeMonth(-1)).toBeNull();
+  });
+  test('13 → null (out of range high)', () => {
+    expect(normalizeMonth(13)).toBeNull();
+  });
+  test("'foo' string → null (non-number type)", () => {
+    expect(normalizeMonth('foo')).toBeNull();
+  });
+  test('1 → 1 (valid lower bound)', () => {
+    expect(normalizeMonth(1)).toBe(1);
+  });
+  test('12 → 12 (valid upper bound)', () => {
+    expect(normalizeMonth(12)).toBe(12);
+  });
+  test('null → null (passthrough)', () => {
+    expect(normalizeMonth(null)).toBeNull();
+  });
+  test('undefined → null (passthrough)', () => {
+    expect(normalizeMonth(undefined)).toBeNull();
+  });
+  test('3.5 non-integer → null', () => {
+    expect(normalizeMonth(3.5)).toBeNull();
   });
 });

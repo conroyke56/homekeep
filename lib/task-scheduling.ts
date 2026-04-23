@@ -256,14 +256,18 @@ export function computeNextDue(
     task.schedule_mode !== 'anchored'
     && task.next_due_smoothed
   ) {
-    const hasWindow =
-      task.active_from_month != null && task.active_to_month != null;
+    // Phase 19 PATCH-01: normalizeMonth collapses PB 0.37.1 cleared-
+    // NumberField=0 to null so hasWindow stays false for year-round
+    // tasks where the column was cleared (not never-set).
+    const fromM = normalizeMonth(task.active_from_month);
+    const toM = normalizeMonth(task.active_to_month);
+    const hasWindow = fromM != null && toM != null;
     const treatAsWakeup = hasWindow && (
       !lastCompletion
       || wasInPriorSeason(
            new Date(lastCompletion.completed_at),
-           task.active_from_month!,
-           task.active_to_month!,
+           fromM!,
+           toM!,
            now,
            timezone,
          )
@@ -288,8 +292,13 @@ export function computeNextDue(
   // season instance than the current one" — either via wasInPriorSeason's
   // dormant-month short-circuit, via the A3 365-day heuristic, or via
   // no completion at all (first cycle is definitionally prior-season).
-  const hasWindow =
-    task.active_from_month != null && task.active_to_month != null;
+  // Phase 19 PATCH-01: normalizeMonth collapses PB 0.37.1 cleared-
+  // NumberField=0 to null. Both `fromM` and `toM` flow into the
+  // seasonal branches below, narrowed from `number | null` to the
+  // caller-consumed `number`.
+  const fromM = normalizeMonth(task.active_from_month);
+  const toM = normalizeMonth(task.active_to_month);
+  const hasWindow = fromM != null && toM != null;
   const nowMonth = timezone
     ? toZonedTime(now, timezone).getMonth() + 1
     : now.getUTCMonth() + 1;
@@ -298,8 +307,8 @@ export function computeNextDue(
     const lastInPriorSeason = lastCompletion
       ? wasInPriorSeason(
           new Date(lastCompletion.completed_at),
-          task.active_from_month!,
-          task.active_to_month!,
+          fromM!,
+          toM!,
           now,
           timezone,
         )
@@ -311,8 +320,8 @@ export function computeNextDue(
     // should see the next open date, not null.
     const inWindowNow = isInActiveWindow(
       nowMonth,
-      task.active_from_month!,
-      task.active_to_month!,
+      fromM!,
+      toM!,
     );
     if (!inWindowNow && !lastInPriorSeason) {
       // Same-season dormant — task is sleeping mid-cycle.
@@ -326,8 +335,8 @@ export function computeNextDue(
     if (lastInPriorSeason) {
       return nextWindowOpenDate(
         now,
-        task.active_from_month!,
-        task.active_to_month!,
+        fromM!,
+        toM!,
         timezone ?? 'UTC',
       );
     }
@@ -418,27 +427,60 @@ export function narrowToPreferredDays(
 }
 
 /**
+ * Phase 19 PATCH-01: normalize PB 0.37.1 NumberField-cleared storage
+ * reality. A cleared NumberField round-trips as `0` (not null), which
+ * makes year-round semantics (null, null) and the storage-reality
+ * (0, 0) diverge silently in every downstream caller. This helper
+ * collapses both to `null` at the data-read boundary plus inside the
+ * scheduler itself (defense-in-depth).
+ *
+ * Returns `null` for: 0, negative ints, ints > 12, non-integers,
+ * non-number types (string, boolean), null, undefined. Returns the
+ * number otherwise.
+ *
+ * Consumed by: isInActiveWindow (defense-in-depth), computeNextDue
+ * hasWindow sites (both smoothed + seasonal branches), page.tsx
+ * mapping literals on dashboard / by-area / person views.
+ *
+ * Pure — no side effects, no I/O.
+ */
+export function normalizeMonth(v: unknown): number | null {
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 1 || v > 12) {
+    return null;
+  }
+  return v;
+}
+
+/**
  * Phase 11 (D-13, SEAS-04): wrap-aware active-window check. Pure fn
  * over month integers (D-20) — caller extracts month from a Date in
  * home tz via toZonedTime(now, tz).getMonth() + 1.
  *
+ * Phase 19 PATCH-01: delegates `from` / `to` normalization to
+ * normalizeMonth so PB 0.37.1's cleared-NumberField=0 storage is
+ * treated identically to null (year-round). Without this, a task
+ * whose active_from_month was cleared after creation would silently
+ * return `0 >= monthOneIndexed` mismatches in the wrap branch.
+ *
  * Invariants:
- *   - monthOneIndexed, from, to all in 1..12 (caller enforces).
- *   - from === to → single-month active window (e.g. active Jan only).
+ *   - monthOneIndexed in 1..12 (caller enforces).
+ *   - from === to (both valid) → single-month active window.
  *   - from > to → wrap window (e.g. Oct..Mar returns true for Dec).
- *   - Either from or to null/undefined → returns true (degenerate;
- *     caller's hasWindow check should short-circuit this, but defense
- *     in depth keeps the helper robust).
+ *   - Either from or to null/0/out-of-range → returns true (degenerate
+ *     year-round; caller's hasWindow check should short-circuit this,
+ *     but defense in depth keeps the helper robust).
  */
 export function isInActiveWindow(
   monthOneIndexed: number,
   from?: number | null,
   to?: number | null,
 ): boolean {
-  if (from == null || to == null) return true;
-  if (from <= to) return monthOneIndexed >= from && monthOneIndexed <= to;
+  const nFrom = normalizeMonth(from);
+  const nTo = normalizeMonth(to);
+  if (nFrom == null || nTo == null) return true;
+  if (nFrom <= nTo) return monthOneIndexed >= nFrom && monthOneIndexed <= nTo;
   // Wrap: e.g. from=10, to=3 → Oct,Nov,Dec,Jan,Feb,Mar active.
-  return monthOneIndexed >= from || monthOneIndexed <= to;
+  return monthOneIndexed >= nFrom || monthOneIndexed <= nTo;
 }
 
 /**

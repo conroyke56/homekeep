@@ -19,6 +19,7 @@ import {
   type PersonTask,
 } from '@/components/person-task-list';
 import { getActiveOverridesForHome } from '@/lib/schedule-overrides';
+import { normalizeMonth } from '@/lib/task-scheduling';
 import { PersonalStats } from '@/components/personal-stats';
 import { NotificationPrefsForm } from '@/components/notification-prefs-form';
 import type { NotificationPrefs } from '@/lib/schemas/notification-prefs';
@@ -158,8 +159,10 @@ export default async function PersonPage({
       // view means "year-round", honoring the paired-or-null invariant
       // Phase 11 locked at the zod layer. PersonTaskList reads these to
       // classify dormants.
-      active_from_month: (t.active_from_month as number | null) ?? null,
-      active_to_month: (t.active_to_month as number | null) ?? null,
+      // Phase 19 PATCH-01: normalizeMonth collapses PB 0.37.1
+      // cleared-NumberField=0 to null (year-round parity).
+      active_from_month: normalizeMonth(t.active_from_month),
+      active_to_month: normalizeMonth(t.active_to_month),
       // Phase 16 Plan 01 (LVIZ-03): threaded to PersonTaskList so the
       // shift-map compute can run per render. '' → null coercion
       // handles PB 0.37.1's empty-DateField read-back.
