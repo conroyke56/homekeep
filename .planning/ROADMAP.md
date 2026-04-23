@@ -460,4 +460,4 @@ Plans:
 **Plans**: 1 plan (single task)
 
 Plans:
-- [ ] 21-01: TBD
+- [ ] 21-01-P01-PLAN.md — Raise INFR-03 image budget 300MB → 320MB (script + SPEC §15 + PROJECT.md + ci.yml label); four forward source-of-truth edits, no code/workflow logic changes.

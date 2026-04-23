@@ -643,8 +643,8 @@ These were noted as v1.1 in earlier planning but did NOT make it into the locked
 
 ### Image Size Budget (INFRA-BUMP)
 
-- [ ] **INFRA-BUMP-01**: INFR-03 budget adjusted 300MB → 320MB with rationale documented in SPEC.md + PROJECT.md; scripts/check-image-size.sh LIMIT updated; CI green on push
+- [x] **INFRA-BUMP-01**: INFR-03 budget adjusted 300MB → 320MB with rationale documented in SPEC.md + PROJECT.md; scripts/check-image-size.sh LIMIT updated; CI green on push
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| INFRA-BUMP-01 | Phase 21 | Pending |
+| INFRA-BUMP-01 | Phase 21 | Complete (21-01) |

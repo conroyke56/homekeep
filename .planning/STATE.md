@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Scheduling & Flexibility
-status: executing
-stopped_at: Completed 20-01-P01-PLAN.md — Phase 20 E2E Test Stabilization (TEST-01 closed; TEST-02 pending CI)
-last_updated: "2026-04-23T13:01:54.579Z"
-last_activity: 2026-04-23 -- Phase 21 execution started
+status: verifying
+stopped_at: Completed 21-01-P01-PLAN.md — INFR-03 bump 300→320MB (INFRA-BUMP-01 closed pending post-push CI green)
+last_updated: "2026-04-23T13:17:41.098Z"
+last_activity: 2026-04-23
 progress:
   total_phases: 19
   completed_phases: 15
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 Phase: 21 (Image Size Budget) — EXECUTING
 Plan: 1 of 1
-Status: Executing Phase 21
-Last activity: 2026-04-23 -- Phase 21 execution started
+Status: Phase complete — ready for verification
+Last activity: 2026-04-23
 
 Progress: [██████████] 100%
 
@@ -116,6 +116,7 @@ Progress: [██████████] 100%
 | Phase 17 P01 | ~20min | 2 tasks | 4 files |
 | Phase 17 P02 | ~14min | 2 tasks | 6 files |
 | Phase Phase 20 PP01 | 12min | 3 tasks | 1 files |
+| Phase 21 P01 | 8 | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -330,6 +331,7 @@ Recent decisions affecting current work:
 - Radix Dialog jsdom polyfill stack cataloged in tests/unit/rebalance-dialog.test.tsx: matchMedia + ResizeObserver + hasPointerCapture + scrollIntoView — canonical reference for future 'use client' Dialog tests
 - Phase 20 TEST-01: Adopted Option C (flow-assertions) for core-loop E2E — band-transition assertions are brittle under LOAD's ±tolerance + load-map scoring; flow evidence (dialog visibility + toast + PB REST count delta) is the stable contract
 - Phase 20 TEST-01: seedCompletion uses POST-then-PATCH with next_due_smoothed='' + reschedule_marker='' to escape computeNextDue's smoothed-branch shadow (Phase 12 LOAD + Phase 13 TCSEM interaction)
+- 21-01: INFR-03 budget raised 300MB → 320MB (v1.1 policy — absorbs ~9MB shadcn+radix+pb growth; docker-layer optimization deferred to v1.2)
 
 ### Pending Todos
 
@@ -355,8 +357,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-23T12:47:05.587Z
-Stopped at: Completed 20-01-P01-PLAN.md — Phase 20 E2E Test Stabilization (TEST-01 closed; TEST-02 pending CI)
+Last session: 2026-04-23T13:17:41.075Z
+Stopped at: Completed 21-01-P01-PLAN.md — INFR-03 bump 300→320MB (INFRA-BUMP-01 closed pending post-push CI green)
 Resume file: None
 
 **Planned Phase:** 17 () — 0 plans — 2026-04-23T01:11:23.880Z
