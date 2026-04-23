@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Lora } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/sonner';
-import { HOMEKEEP_BUILD as HK_BUILD_ID } from '@/lib/constants';
+import { HOMEKEEP_BUILD, getBuildIdPublic } from '@/lib/constants';
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 // Lora: warm humanist serif per SPEC §19 ("readable serif or humanist sans for headings").
@@ -44,18 +44,23 @@ export const viewport: Viewport = {
   themeColor: '#D4A574',
 };
 
-// HOMEKEEP_BUILD (re-imported above as HK_BUILD_ID) is the public build
-// fingerprint. It's injected at docker build via HK_BUILD_ID --build-arg and
-// falls back to the 'hk-dev-local' sentinel when unset. See lib/constants.ts
-// and .planning/phases/07-pwa-release/07-CONTEXT.md for the canary strategy.
+// HOMEKEEP_BUILD is the real build fingerprint — injected at docker build via
+// HK_BUILD_ID --build-arg, falls back to 'hk-dev-local' sentinel when unset.
+// Phase 24 HDR-04: public-facing emissions go through getBuildIdPublic() so
+// HK_BUILD_STEALTH=true redacts `<meta>` tags to `hk-hidden`. The real constant
+// is still referenced (`void HOMEKEEP_BUILD` below) to keep the module in the
+// bundle graph — tree-shake guard for scheduler.ts startup log.
+// See lib/constants.ts + .planning/phases/07-pwa-release/07-CONTEXT.md.
+void HOMEKEEP_BUILD;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const publicBuildId = getBuildIdPublic();
   return (
     <html lang="en" className={cn('font-sans', geist.variable, lora.variable)}>
       <head>
         {/* Provenance marker — intentional, survives minification. Do not remove. */}
-        <meta name="generator" content={`HomeKeep v1 (${HK_BUILD_ID})`} />
-        <meta name="hk-build" content={HK_BUILD_ID} />
+        <meta name="generator" content={`HomeKeep v1 (${publicBuildId})`} />
+        <meta name="hk-build" content={publicBuildId} />
       </head>
       <body className="min-h-screen antialiased">
         {/* HomeKeep (https://github.com/conroyke56/homekeep) — AGPL-3.0-or-later. */}

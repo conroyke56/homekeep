@@ -5,6 +5,7 @@ import {
   HOMEKEEP_BUILD,
   HOMEKEEP_REPO,
   HOMEKEEP_LICENSE,
+  getBuildIdPublic,
 } from '@/lib/constants';
 
 /**
@@ -39,8 +40,13 @@ export function GET() {
   // cases where HOMEKEEP_BUILD may have been frozen at an earlier module
   // evaluation. HOMEKEEP_BUILD is still imported to keep the module in
   // the bundle graph (tree-shake guard).
+  //
+  // Phase 24 HDR-04: getBuildIdPublic() honours HK_BUILD_STEALTH=true,
+  // replacing the real UUID with the literal `hk-hidden` so the public
+  // provenance endpoint stops doubling as a version-fingerprint probe
+  // (M-1 in public-facing-hardening.md).
   void HOMEKEEP_BUILD;
-  const build = process.env.HK_BUILD_ID ?? 'hk-dev-local';
+  const build = getBuildIdPublic();
 
   return NextResponse.json(
     {
