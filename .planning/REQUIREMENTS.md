@@ -695,12 +695,18 @@ These were noted as v1.1 in earlier planning but did NOT make it into the locked
 
 ### Rate Limits + Abuse Prevention (RATE)
 
-- [ ] **RATE-01**: Row-creation quotas at PB rule layer: max 5 homes per `owner_id`, max 500 tasks per `home_id`, max 10 areas per `home_id` (excluding Whole Home). Configurable via env.
-- [ ] **RATE-02**: Signup rate-limit tightened from shared 300/60s bucket to dedicated `users/create = 10/60s` per-IP.
-- [ ] **RATE-03**: Invite-accept rate-limit `invites/accept = 5/60s` per-IP + per-token lockout after 3 failed attempts.
-- [ ] **RATE-04**: Password-reset-confirm rate-limit `users/confirm-password-reset = 5/60s` per-IP.
-- [ ] **RATE-05**: Auth-with-password bucket tightened from 60/60s to 20/60s per-IP (original Phase 2 value; was widened for E2E in Phase 4-5).
-- [ ] **RATE-06**: Ntfy topic minimum length raised 4 → 12 chars + must-contain-digit to prevent topic enumeration.
+- [x] **RATE-01
+**: Row-creation quotas at PB rule layer: max 5 homes per `owner_id`, max 500 tasks per `home_id`, max 10 areas per `home_id` (excluding Whole Home). Configurable via env.
+- [x] **RATE-02
+**: Signup rate-limit tightened from shared 300/60s bucket to dedicated `users/create = 10/60s` per-IP.
+- [x] **RATE-03
+**: Invite-accept rate-limit `invites/accept = 5/60s` per-IP + per-token lockout after 3 failed attempts.
+- [x] **RATE-04
+**: Password-reset-confirm rate-limit `users/confirm-password-reset = 5/60s` per-IP.
+- [x] **RATE-05
+**: Auth-with-password bucket tightened from 60/60s to 20/60s per-IP (original Phase 2 value; was widened for E2E in Phase 4-5).
+- [x] **RATE-06
+**: Ntfy topic minimum length raised 4 → 12 chars + must-contain-digit to prevent topic enumeration.
 
 ### Demo Instance Architecture (DEMO)
 
