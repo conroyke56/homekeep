@@ -12,16 +12,22 @@ Future projects should reference these files from their own
 
 ### Root-handoff (bidirectional)
 
-- **[`ROOT-ONE-LINER.md`](ROOT-ONE-LINER.md)** — **START HERE** if you
-  have a root Claude session open. Contains the single line to paste
-  that triggers the full VPS-wide infra sync. Everything else below
-  is context the root Claude will read on its own.
-- **[`root-infra-sync.md`](root-infra-sync.md)** — the idempotent
-  procedure the root Claude follows: verify-before-apply for each
-  task, writes a timestamped report to `/opt/vps/reports/`,
-  generates a resume prompt to paste back into the homekeep Claude.
-  Covers `/opt/vps/CLAUDE.md` + per-user symlinks + PORTS.md
-  + centralized GoDaddy creds (ACLs) + optional nightly-backups cron.
+- **[`PHASE-34-ONE-LINER.md`](PHASE-34-ONE-LINER.md)** — **CURRENT
+  PENDING WORK** as of 2026-04-24: decouple the shared revproxy from
+  sprout's home dir. Paste into root Claude to execute Phase 34.
+- **[`phase-34-directive.md`](phase-34-directive.md)** — the
+  detailed Phase 34 procedure (idempotent, verify-before-apply,
+  writes per-task report + TWO resume prompts — one for homekeep
+  Claude, one for sprout Claude).
+- **[`ROOT-ONE-LINER.md`](ROOT-ONE-LINER.md)** — earlier root-handoff
+  one-liner for Phase 33 (VPS memory sync + /opt/vps/CLAUDE.md +
+  secrets centralization). Executed 2026-04-24T11:35:01Z; kept
+  for reference + if the root sync ever needs a re-run.
+- **[`root-infra-sync.md`](root-infra-sync.md)** — the Phase 33
+  idempotent procedure (verify-before-apply, writes timestamped
+  report, generates resume prompt). Covers `/opt/vps/CLAUDE.md` +
+  per-user imports + PORTS.md + centralized GoDaddy creds (ACLs) +
+  system-wide git excludes + optional nightly-backups cron.
 - **[`CLAUDE.md.proposed`](CLAUDE.md.proposed)** — the canonical
   content that gets installed at `/opt/vps/CLAUDE.md`. Edits to this
   file propagate on the next root sync.
