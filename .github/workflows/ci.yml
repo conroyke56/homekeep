@@ -65,6 +65,13 @@ jobs:
         run: npm run build
 
       - name: E2E tests
+        env:
+          # Phase 28+ CI exemption: E2E suite signs up 15+ users in parallel
+          # across test files; PB's 10/60s users:create and 20/60s
+          # authWithPassword buckets (Phase 25 RATE-02/05) block that volume.
+          # bootstrap_ratelimits.pb.js reads this env and skips rule setup
+          # entirely when true. Production deployments leave this unset.
+          DISABLE_RATE_LIMITS: "true"
         run: npm run test:e2e
 
       - name: Set up Buildx (for docker build sanity)

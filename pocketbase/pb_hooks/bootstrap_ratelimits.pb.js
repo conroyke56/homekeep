@@ -17,10 +17,25 @@ onBootstrap((e) => {
   // existing Go slice to empty and pushing plain objects DOES coerce
   // correctly (the plan explicitly authorised this fallback).
   const settings = $app.settings();
-  settings.rateLimits.enabled = true;
+
+  // Phase 28+ CI exemption: DISABLE_RATE_LIMITS=true (typically set by CI
+  // E2E suites) skips all rate-limit rules. The E2E suite signs up 15+
+  // users across parallel workers and blows the 10/60s RATE-02 signup
+  // bucket, breaking tests that assert post-signup URL redirects. This
+  // env gate keeps production-grade limits on operator deployments while
+  // letting test workers exercise the full flow. NOT safe for public
+  // deployments — leave unset (or explicitly false) in real envs.
+  const disableRateLimits = $os.getenv("DISABLE_RATE_LIMITS") === "true";
+  settings.rateLimits.enabled = !disableRateLimits;
 
   // Reset to a known state in case of re-bootstrap (hot reload, etc.).
   settings.rateLimits.rules.splice(0, settings.rateLimits.rules.length);
+
+  if (disableRateLimits) {
+    $app.save(settings);
+    console.log("[ratelimits] DISABLED via DISABLE_RATE_LIMITS=true");
+    return;
+  }
 
   // Brute-force protection on login endpoint: 20 attempts / 60s per IP
   // for unauthenticated users (supports T-02-01-03). Path form matches
