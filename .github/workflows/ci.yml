@@ -15,7 +15,11 @@ concurrency:
 jobs:
   lint-test-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # v1.2.1: bumped 25 -> 45 min. arm64 cross-build via QEMU emulation
+    # regularly finished right at the 25-min boundary; with E2E + tests
+    # + type-check + lint in front of it, jobs started racing the limit
+    # once the E2E suite grew past ~25 specs. Release workflow uses 60.
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
