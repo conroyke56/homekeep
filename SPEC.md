@@ -1,7 +1,7 @@
 # HomeKeep — Product Specification
 
-**Version:** 0.4 (v1.1 Scheduling & Flexibility)
-**Status:** Release-ready for v1.1.0-rc1
+**Version:** 0.5 (v1.2 Red Team Audit & Public-Facing Hardening)
+**Status:** Release-ready for v1.2.0
 **License:** AGPL-3.0-or-later (see [SECURITY.md](SECURITY.md) for reporting security issues)
 
 ---
@@ -565,6 +565,201 @@ Caddy compose, Tailscale compose, README, DEPLOYMENT.md, multi-arch CI, first ta
 ---
 
 ## Changelog
+
+### v0.5 — Red Team Audit & Public-Facing Hardening (2026-04-24)
+
+Material spec bump (v0.4 → v0.5) for the v1.2-security milestone. No new
+user-visible features; every change tightens the attack surface, the
+supply-chain posture, or the operator-facing security documentation.
+Ships as `v1.2.0`. All migrations are additive; v1.1 installs upgrading
+via `:1` or `:latest` lose no data. Anchored-mode / cycle-mode scheduling
+semantics are byte-identical to v1.1.
+
+**Discovery (v1.2-security research, 4 reports):**
+- `auth-access-control.md` — authentication, authorization, session lifecycle
+- `attack-surface.md` — server actions, PB collections, API routes, hooks
+- `public-facing-hardening.md` — transport, headers, rate limits, deployment
+- `supply-chain.md` — image signing, SBOM, provenance, action pinning
+
+All reports landed 2026-04-22 and drove the 35-REQ-ID plan split across
+Phases 22-28.
+
+**Emergency hotfix (Phase 22, HOTFIX-01..03):**
+- HOTFIX-01: internal + external Caddy now block `/_/*`,
+  `/api/_superusers`, `/api/_superusers/*`, and
+  `/api/collections/_superusers/*` with 404. `ALLOW_PUBLIC_ADMIN_UI=true`
+  env flag is the only bypass.
+- HOTFIX-02: VPS `PB_ADMIN_PASSWORD` and `ADMIN_SCHEDULER_TOKEN` rotated
+  via `openssl rand`; `docker/.env` pinned to mode `600`.
+- HOTFIX-03: GitHub PAT rotation guidance documented; user action to
+  swap the classic PAT for a fine-grained one.
+
+**Code attack surface (Phase 23, SEC-01..07):**
+- SEC-01: parameterised every `pb.filter(...)` call site across
+  `app/**/*.tsx` + `lib/**/*.ts` (15 files, 27 sites). Template-literal
+  filter strings are now impossible to regress via grep gate.
+- SEC-02: new migration `1745280004_schedule_overrides_body_check.js`
+  adds `@request.body.created_by_id = @request.auth.id` to
+  `schedule_overrides.createRule`, preventing audit-trail forgery by a
+  home member.
+- SEC-03: `app/api/admin/run-scheduler/route.ts` token compare replaced
+  `!==` with `crypto.timingSafeEqual` plus length pre-check. Byte-by-byte
+  timing oracle closed.
+- SEC-04: `updateTask` now cross-verifies `area_id.home_id` against the
+  task's `home_id`, matching the `createTaskAction` invariant. Rejects
+  attempts to re-home a task into a second-home area.
+- SEC-05: new PB hook `users_last_viewed_home_membership.pb.js` + existing
+  action-layer `assertMembership` close the IDOR on
+  `users.last_viewed_home_id` for direct-SDK writes.
+- SEC-06: signup + reset-confirm password minimum raised 8 → 12 chars.
+  Login floor kept at 8 so existing users are not locked out. 12 E2E
+  specs updated to the new minimum.
+- SEC-07: `app/(app)/layout.tsx` swapped to
+  `createServerClientWithRefresh()`. Stale / revoked tokens now reject at
+  render time with a redirect to `/login`.
+
+**HTTP headers + transport (Phase 24, HDR-01..04):**
+- HDR-01: `next.config.ts` `headers()` export adds CSP-Report-Only, HSTS
+  (HTTPS only), X-Frame DENY, X-Content-Type nosniff, Referrer-Policy
+  strict-origin-when-cross-origin, and Permissions-Policy all-off to
+  every response.
+- HDR-02: same 5 headers mirrored at the Caddy layer —
+  `docker/Caddyfile` (internal) + `docker/Caddyfile.prod` (external,
+  adds HSTS). `-Server` and `-X-Powered-By` stripped on both layers.
+- HDR-03: new `/api/csp-report` endpoint accepts browser violation POSTs,
+  logs to stdout with `[CSP-REPORT]` prefix (capped at 4096 chars), always
+  returns 204. Builds a 30-day soak corpus for the future enforced-CSP flip.
+- HDR-04: `HK_BUILD_STEALTH=true` env flag redacts the `HomeKeep-Build`
+  response header, `<meta name="hk-build">` tag, and
+  `/.well-known/homekeep.json` `build` field to the literal `hk-hidden`.
+  Read on every request — toggle without rebuilding the image.
+
+**Rate limits + abuse prevention (Phase 25, RATE-01..06):**
+- RATE-01: per-owner row quotas via `lib/quotas.ts` —
+  `MAX_HOMES_PER_OWNER` (default 5), `MAX_TASKS_PER_HOME` (default 500,
+  archived exempt), `MAX_AREAS_PER_HOME` (default 10, Whole Home exempt).
+  Enforced at the server-action layer (PB JSVM hooks were infeasible due
+  to 0.37.1 handler dispatch quirks — documented in phase summary).
+- RATE-02: new PB rate-limit bucket `users:create` → 10 req/60s per IP
+  guest. Replaces the prior generic `/api/` 300/60s fallback on signup.
+- RATE-03: invite-accept action (`lib/actions/invites.ts`) gains a
+  sliding-window per-IP limiter (5/60s) plus a 3-strike per-token lockout
+  with 1h cool-down. In-memory, reset on container restart.
+- RATE-04: new PB rate-limit bucket `users:confirmPasswordReset` →
+  5 req/60s per IP guest.
+- RATE-05: `*:authWithPassword` bucket tightened 60/60s → 20/60s per IP.
+  Dictionary attacks against a 6-char password set now take ~14 days
+  per IP instead of ~4.5.
+- RATE-06: ntfy topic schema raised to `min 12 chars AND ≥1 digit`.
+  Guessable-topic risk (noted in M-4 of the research) closed for new
+  preferences; grandfathered for existing users.
+
+**Demo instance architecture (Phase 26, DEMO-01..05):**
+- DEMO-01: new `docker/docker-compose.demo.yml` overlay — tmpfs
+  `/app/data` (256 MB cap, state never touches disk); sets
+  `DEMO_MODE=true`, `DISABLE_SCHEDULER=true`, `HK_BUILD_STEALTH=true`,
+  `NTFY_URL=""`; image pinned via `GHCR_OWNER` + `TAG` env vars. Paired
+  `docker/.env.demo` template forces `PB_ADMIN_PASSWORD` rotation before
+  first `compose up`.
+- DEMO-02: `lib/demo-session.ts::ensureDemoSession()` + new
+  `/api/demo/session` route. First visit mints a throwaway user
+  (random 12-char hex), creates "Demo House" + Kitchen + Outdoor +
+  Whole Home areas, batch-seeds 15 tasks in one `pb.createBatch`
+  transaction, and 303-redirects to `/h/<homeId>` with `pb_auth` + a
+  24h `homekeep_demo_session` cookie. Resume path re-mints `pb_auth` via
+  PB 0.22+ `users.impersonate(userId, 86400)`. Migration
+  `1745280006_demo_flag.js` adds `users.is_demo BOOL` +
+  `users.last_activity DATETIME`.
+- DEMO-03: `pb_hooks/demo_cleanup.pb.js` cron runs every 15 minutes.
+  Two-pass sweep: idle (`last_activity < now-2h`) + absolute
+  (`created < now-24h`); deletes homes before users so `cascadeDelete=true`
+  propagates to tasks / areas / completions / members / overrides.
+  Defense-in-depth per-row `is_demo === true` re-check inside the delete
+  loop. PB datetime-format quirk (space-separated stored vs ISO-T emitted)
+  documented and patched (`.replace('T', ' ')` on both cutoff strings).
+- DEMO-04: `components/demo-banner.tsx` (server) +
+  `components/demo-banner-dismissible.tsx` (client) — amber banner above
+  `{children}` in `app/layout.tsx`, dismissal persisted to
+  `localStorage['dismissed_demo_banner']`. Zero bytes shipped to
+  non-demo clients (`DEMO_MODE !== 'true'` returns `null`).
+- DEMO-05: `docker/Caddyfile.demo` — dedicated block for
+  `homekeep.demo.kizz.space` with the Phase 24 header set. NO
+  `ALLOW_PUBLIC_ADMIN_UI` escape hatch; the admin UI is always 404 on
+  demo hosts. `docs/deployment.md` gains a 60-line "Deploying a public
+  demo" section covering DNS, `.env.demo` rotation, compose chain,
+  verification, and tear-down.
+
+**Supply chain hardening (Phase 27, SUPPLY-01..06):**
+- SUPPLY-01: cosign keyless image signing via GitHub OIDC. New step in
+  `.github/workflows/release.yml` signs every `ghcr.io/.../homekeep@<digest>`
+  after the push, binding the signature to the workflow identity. No
+  long-lived keys; consumers verify with
+  `cosign verify --certificate-identity-regexp '...release.yml@' --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'`.
+- SUPPLY-02: SPDX SBOM + SLSA-3 provenance attached to every build via
+  BuildKit's native `sbom: true` + `provenance: mode=max` flags on
+  `docker/build-push-action`. Applied to both `release.yml` and
+  `edge.yml` — the bleeding-edge channel gets the same attestations.
+- SUPPLY-03: every GitHub Action in release.yml / ci.yml / edge.yml
+  replaced floating-major refs (`@v6`, `@v4`) with full 40-char commit
+  SHAs + trailing `# v<tag>` comment. New `.github/dependabot.yml`
+  schedules weekly updates for both `github-actions` and `docker`
+  ecosystems. Grep gate: `uses:\s+\S+@v\d+\s*$` returns no matches.
+- SUPPLY-04: `docker/Dockerfile` base images digest-pinned via
+  `ARG NODE_DIGEST=sha256:...` + `ARG CADDY_DIGEST=sha256:...` applied
+  to all three FROM stages and the Caddy `COPY --from=` step
+  (inlined because `COPY --from=` does not interpolate ARGs).
+- SUPPLY-05: `scripts/dev-pb.js` now fetches
+  `pocketbase_<ver>_checksums.txt` from the same release and verifies
+  the downloaded zip's SHA-256 via streaming
+  `crypto.createHash('sha256')` before extracting / chmod+x. Mismatch
+  deletes the zip and exits 1. Helpers (`expectedSha256`, `sha256File`)
+  refactored to be importable without spawning PB, enabling 8-case unit
+  coverage in `tests/unit/dev-pb-checksum.test.ts`.
+- SUPPLY-06: `NEXT_TELEMETRY_DISABLED=1` set in the Dockerfile builder
+  stage, runtime stage, and `docker-compose.yml`. CI build no longer
+  phones home to `telemetry.nextjs.org`; running containers emit no
+  telemetry.
+
+**Documentation + responsible disclosure (Phase 28, SECDOC-01..04):**
+- SECDOC-01: `SECURITY.md` at repo root — supported versions, threat
+  model summary (what HomeKeep protects, what it doesn't, deployment
+  model assumptions), reporting a vulnerability (email + PGP
+  placeholders for maintainer to fill, 7-day ack + 90-day fix SLA),
+  scope / out-of-scope, safe-harbor clause modelled on Dropbox + GitHub,
+  empty advisories table (all v1.2-security findings fixed
+  pre-publication).
+- SECDOC-02: `docs/deployment-hardening.md` — 15-item operator checklist
+  for public-facing install. Each item has description, why it matters,
+  how (command + config), and verify step. Covers DOMAIN + Caddy, secret
+  generation, `.env` perms, admin-UI edge block, security headers,
+  firewall, stealth build-id, row quotas, 90-day rotation, CSP reports,
+  release feed, and `cosign verify`.
+- SECDOC-03: README gains a "Security" section linking SECURITY.md.
+  SPEC.md License line appends a SECURITY.md reference.
+  `docs/deployment.md` gains a "Public deployment hardening" subsection
+  linking the new checklist.
+- SECDOC-04: this changelog section + SPEC.md version bump (0.4 → 0.5)
+  and status line update.
+
+**Test delta:**
+- Phase 22: 0 (ops + config only)
+- Phase 23: +19 (629 total)
+- Phase 24: +8 (637 total)
+- Phase 25: +22 (659 total)
+- Phase 26: +5 (664 total)
+- Phase 27: +8 (672 total)
+- Phase 28: 0 (pure docs)
+- v1.2-security cumulative: +62 tests (610 pre → 672 post)
+
+**Deferred (captured in phase summaries, not blocking v1.2.0):**
+- Real PGP key for security@ contact (placeholder ships with v1.2.0;
+  user generates the key post-release)
+- HackerOne / Bugcrowd listing (evaluate for v1.3+)
+- Numbered advisory site at a dedicated domain (v1.3+)
+- CSP flip from Report-Only to enforced (needs 30-day soak corpus;
+  target v1.2.1)
+- DNS-01 wildcard cert via GoDaddy plugin for `*.demo.kizz.space`
+  (currently operator manual DNS; target v1.3)
 
 ### v0.4 — v1.1 Scheduling & Flexibility (2026-04-22)
 
