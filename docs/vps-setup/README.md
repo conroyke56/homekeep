@@ -60,10 +60,11 @@ Future projects should reference these files from their own
   - `homekeep` — runs HomeKeep at `/srv/homekeep/`; this directory
   - `claude-dev` — runs aom-wiki at `/opt/aom-wiki/`
   - future projects follow the same shape
-- **Shared infrastructure under `sprout`**:
-  - `revproxy-caddy-1` on `--network host` (binds 80/443)
-  - Vhost snippets import from `/home/sprout/revproxy/vhosts/*.caddy`
-  - GoDaddy API creds at `/home/sprout/.config/godaddy/credentials`
+- **Shared infrastructure under `/opt/vps/`** (post-Phase-34):
+  - `revproxy-caddy-1` on `--network host` (binds 80/443), compose + Caddyfile + data at `/opt/vps/revproxy/`
+  - Vhost snippets import from `/opt/vps/vhosts/*.caddy` — ACL'd
+    `rwx` for homekeep/sprout/claude-dev (self-serve, no cross-user handoff)
+  - GoDaddy API creds at `/etc/secrets/godaddy.creds` (ACL'd for sprout + homekeep; both in `secrets` group)
 - **the-kizz.com** is the user's project-facing domain. Pattern:
   `<project>.the-kizz.com` (prod) + `<project>.demo.the-kizz.com`
   (public demo) + `<project>.dev.the-kizz.com` (staging).

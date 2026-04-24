@@ -20,7 +20,9 @@
 #   3. Does NOT include docker-compose.caddy.yml — the shared revproxy
 #      handles TLS. Add a vhost snippet from
 #      `docker/revproxy-vhosts/homekeep.demo.the-kizz.com.caddy` to
-#      `/home/sprout/revproxy/vhosts/` and reload revproxy-caddy.
+#      `/opt/vps/vhosts/` (Phase 34 — was `/home/sprout/revproxy/vhosts/`
+#      pre-migration; as homekeep you have direct POSIX ACL write
+#      access there) and reload revproxy-caddy.
 
 services:
   homekeep:
