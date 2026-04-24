@@ -1,0 +1,32 @@
+# Demo overlay — VPS-specific adjustments so the demo stack coexists
+# with (a) the existing `homekeep` personal/dev instance on port 3000
+# and (b) the shared host-network `revproxy-caddy-1` binding 80/443
+# for other services on this VPS.
+#
+# Chain (run from /srv/homekeep):
+#   docker compose -p homekeep-demo \
+#     -f docker/docker-compose.yml \
+#     -f docker/docker-compose.demo.yml \
+#     -f docker/docker-compose.demo-vps.yml \
+#     --env-file docker/.env.demo.local \
+#     up -d
+#
+# Differences from a stand-alone demo deploy:
+#   1. Container name becomes `homekeep-demo` to avoid colliding with
+#      the existing `homekeep` personal instance on this host.
+#   2. Exposes the Next server on `127.0.0.1:3001` (loopback only) so
+#      the shared revproxy-caddy can reverse_proxy to it, but nothing
+#      else on the public network touches it directly.
+#   3. Does NOT include docker-compose.caddy.yml — the shared revproxy
+#      handles TLS. Add a vhost snippet from
+#      `docker/revproxy-vhosts/homekeep.demo.the-kizz.com.caddy` to
+#      `/home/sprout/revproxy/vhosts/` and reload revproxy-caddy.
+
+services:
+  homekeep:
+    container_name: homekeep-demo
+    ports: !override
+      - "127.0.0.1:3001:3000"
+    # Baseline bind-mount volume is neutralized by docker-compose.demo.yml
+    # (`volumes: !reset []` + tmpfs). No further override needed here —
+    # just let the demo overlay's tmpfs block stand.

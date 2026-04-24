@@ -1,0 +1,39 @@
+# Vhost snippet for /home/sprout/revproxy/vhosts/
+#
+# This file is intended to be dropped into the shared revproxy-caddy
+# stack's vhosts directory (`/home/sprout/revproxy/vhosts/`). The main
+# revproxy Caddyfile is expected to `import /etc/caddy/vhosts/*.caddy`
+# so this block activates automatically after a Caddy reload.
+#
+# Assumes the HomeKeep demo container binds to 127.0.0.1:3001 on the
+# host (see docker/docker-compose.demo-vps.yml override). The shared
+# revproxy runs on --network host so 127.0.0.1 reaches the host's
+# loopback directly.
+#
+# Security headers mirror Phase 24 HDR-02 Caddy-layer posture.
+# Admin UI block mirrors Phase 22 HOTFIX-01. No ALLOW_PUBLIC_ADMIN_UI
+# escape hatch — the demo NEVER permits admin through the edge.
+
+homekeep.demo.the-kizz.com {
+	encode zstd gzip
+
+	header {
+		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://ntfy.sh https://*.ntfy.sh; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; report-uri /api/csp-report"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+		-Server
+		-X-Powered-By
+	}
+
+	@admin_path path /_/* /api/_superusers /api/_superusers/* /api/collections/_superusers/*
+	handle @admin_path {
+		respond 404
+	}
+
+	reverse_proxy 127.0.0.1:3001 {
+		flush_interval -1
+	}
+}

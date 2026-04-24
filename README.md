@@ -29,6 +29,35 @@ Built for people who self-host things and want ownership of their data. AGPL v3,
 2. **Shared, not competitive.** Streaks and progress are "us vs. the house," never partner-vs-partner.
 3. **Forgiveness built in.** Miss a week? The app redistributes, doesn't scold.
 
+## What's new in v1.2.1 — Self-Host UX polish
+
+Lightweight patch on top of v1.2.0. Addresses four small-but-noisy issues a fresh live-smoke test against a deployed instance turned up:
+
+- **Tap-to-view, not tap-to-complete.** Tapping a task row now opens the detail sheet. Completion lives behind the sheet's **Complete** button. iOS-style tap-to-view — fewer accidental completions, and "Reschedule" / "Edit" / "Archive" are right there.
+- **"Keep me signed in for 14 days"** checkbox on the login form. Default checked (14-day persistent cookie, prior behavior). Unchecked = session cookie that drops on browser close — useful on shared devices.
+- **No more warning on brand-new tasks.** The early-completion guard used to fire on *any* completion of a task created less than 25% of its frequency ago — so "I just added this 5 minutes ago and I'm doing it today" always triggered a confirm. Now the guard only protects against genuine double-tap / re-complete accidents.
+- **Configurable password strength.** New `PASSWORD_POLICY=simple|strong` env var. Default `simple` = 8-char floor everywhere (right for LAN / Tailscale / single-household self-hosts). Public-facing operators set `strong` for a 12-char floor on signup + reset. Login always accepts 8+ so pre-flip accounts never get locked out. See `docs/deployment-hardening.md` item 12b.
+
+Plus: fixed a silent `Secure` cookie bug on LAN-HTTP deploys (signup succeeded but every authed page bounced to login), routed Next.js API paths correctly behind the built-in Caddy edge, and removed a dead "Learn more" link that was spamming 9+ console 404s per HTTP session.
+
+## What's new in v1.2 — Security milestone
+
+No new user-facing features; every change tightens the attack surface or the operator-facing security posture. Ship-safe for public internet exposure (with `docs/deployment-hardening.md`).
+
+- **Cosign-signed images.** Every `ghcr.io/the-kizz/homekeep:*` tag is signed via GitHub OIDC keyless. No long-lived keys; the signature is bound to the exact workflow that built it. Verify with:
+  ```bash
+  cosign verify ghcr.io/the-kizz/homekeep:latest \
+    --certificate-identity-regexp '^https://github.com/the-kizz/homekeep/.github/workflows/release.yml@.+' \
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com
+  ```
+- **SBOM + SLSA-3 provenance.** Every image has a SPDX SBOM (currently ~552 packages) and a SLSA-3 provenance attestation embedded as OCI attestations. Inspect with `docker buildx imagetools inspect ghcr.io/the-kizz/homekeep:latest`.
+- **Security headers + CSP.** CSP-Report-Only during the soak window, HSTS on HTTPS deploys, X-Frame DENY, X-Content-Type nosniff, strict-origin-when-cross-origin referrer, permissions-policy all-off. Served at both Next.js (`next.config.ts`) and Caddy (`docker/Caddyfile*`) layers — strip-safe.
+- **PocketBase admin blocked at the edge.** `/_/*`, `/api/_superusers`, and related paths return 404 through Caddy by default. Operators with admin need a temporary `ALLOW_PUBLIC_ADMIN_UI=true` flip or a `docker exec` into the container.
+- **Row quotas + rate limits.** `MAX_HOMES_PER_OWNER` (5), `MAX_TASKS_PER_HOME` (500 active), `MAX_AREAS_PER_HOME` (10). Signup capped 10/60s per IP; password-reset 5/60s; auth-with-password 20/60s; invite-accept 5/60s per IP with a 3-strike per-token lockout.
+- **SECURITY.md + disclosure process.** Scope, safe-harbor, 7-day ack / 90-day fix SLA, `docs/deployment-hardening.md` checklist (15+ items).
+
+See [`docs/deployment-hardening.md`](docs/deployment-hardening.md) for the operator checklist before public exposure.
+
 ## What's new in v1.1 — Scheduling & Flexibility
 
 The big idea: **spread the year's work evenly across weeks**. v1.0 kept tasks separate by band; v1.1 makes the app actively smooth household load so you don't get six annual tasks all landing on the same Saturday.
@@ -113,7 +142,8 @@ By Area, Person, History, coverage ring, early-completion guard, cascading assig
 - Zod + react-hook-form, @dnd-kit for drag-to-reorder
 - node-cron for the hourly scheduler, ntfy for push
 - s6-overlay supervises Caddy + PocketBase + Next.js inside one container
-- Vitest (unit) + Playwright (E2E); 598 unit + 23 E2E tests (v1.1)
+- Vitest (unit) + Playwright (E2E); **678 unit + 24 E2E tests** (v1.2.1)
+- **Cosign** keyless image signing + **SPDX SBOM** + **SLSA-3 provenance** on every GHCR push
 
 ## Quickstart
 
