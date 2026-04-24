@@ -290,6 +290,31 @@ export async function rebalanceApplyAction(
       (a, b) => a.naturalIdeal.getTime() - b.naturalIdeal.getTime(),
     );
 
+    // Phase 28+ idempotency fix: subtract ALL rebalanceable tasks' CURRENT
+    // smoothed contributions from the load map BEFORE the placement loop.
+    // Without this, Run 2 and Run 3 see different starting maps (Run 3
+    // reads Run 2's just-written smoothed values), which drifts placement
+    // between runs. By stripping the rebalanceable bucket first, every
+    // re-run starts from a "rebalanceable-has-not-been-placed" state that
+    // is stable across runs — so placement output stays bit-identical.
+    // placeNextDue already self-excludes the target task (Phase 19
+    // PATCH-03); this loop extends the exclusion to all siblings in the
+    // bucket. Net effect: idempotent re-run over a stable set.
+    for (const { task } of ranked) {
+      if (task.next_due_smoothed) {
+        try {
+          const existing = new Date(task.next_due_smoothed);
+          if (!isNaN(existing.getTime())) {
+            const k = isoDateKey(existing, homeTz);
+            const prev = householdLoad.get(k) ?? 0;
+            if (prev > 0) householdLoad.set(k, prev - 1);
+          }
+        } catch {
+          // stale / corrupt value — skip subtraction
+        }
+      }
+    }
+
     // REBAL-07: sequential placement loop with in-memory load-map
     // threading. Mirrors lib/actions/seed.ts:171-223 (Phase 13 TCSEM)
     // and the completeTaskAction step 7.5 pattern (Phase 12 Plan 12-03).
