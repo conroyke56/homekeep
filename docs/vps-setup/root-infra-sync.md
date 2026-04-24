@@ -154,7 +154,96 @@ judgement on when to rotate):
 - Same update for `/home/sprout/.config/godaddy/credentials` if sprout
   wants to collapse to the central file too.
 
-### Task 5 — Nightly backups cron (OPTIONAL, only if operator agrees)
+### Task 5 — System-wide git excludes file (applies to every repo)
+
+Git has a `core.excludesFile` config that layers on top of each repo's
+own `.gitignore`. Setting it system-wide means every repo on the VPS
+auto-ignores the "universal" patterns (Claude session files, common
+secret formats, OS cruft) without anyone needing to touch the repo's
+own `.gitignore`. Stack-specific patterns (`node_modules`, `.next`,
+`__pycache__`, …) still live in each repo's own `.gitignore` — this
+is the lowest-common-denominator layer.
+
+**Verify:**
+```bash
+[ -f /etc/gitignore-vps-baseline ] && \
+  git config --system --get core.excludesFile
+# If prints "/etc/gitignore-vps-baseline" → already live, skip.
+```
+
+**Apply:**
+```bash
+cat > /etc/gitignore-vps-baseline <<'EOF'
+# VPS-wide git excludes — applies on top of each repo's .gitignore
+# via `git config --system core.excludesFile`.
+# Language-agnostic only; stack-specific ignores stay in each repo.
+# Rotate by editing this file; takes effect on the next git command.
+
+# ─── Claude Code per-session artifacts ─────────────────────────
+# Project-level Claude files (.claude/agents, .claude/skills,
+# .claude/commands, .claude/hooks, CLAUDE.md) are committed
+# explicitly. Everything below is personal / machine-local / runtime.
+.claude/scheduled_tasks.lock
+.claude/settings.json
+.claude/settings.local.json
+.claude/settings.json.pre-*
+.claude/.credentials.json
+.claude/cache/
+.claude/sessions/
+.claude/history.jsonl
+.claude/file-history/
+CLAUDE.local.md
+
+# ─── Secrets (belt-and-braces) ────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.env.pre-*-backup
+*.pem
+*.key
+!public.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+*.gpg
+*secret*.json
+!*.secret.template.json
+
+# ─── OS / editor cruft ────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# ─── Logs / temp ──────────────────────────────────────────────
+*.log
+*.tmp
+EOF
+chmod 644 /etc/gitignore-vps-baseline
+
+# Wire it up system-wide
+git config --system core.excludesFile /etc/gitignore-vps-baseline
+
+# Verify
+echo "Active system excludesFile:"
+git config --system --get core.excludesFile
+echo ""
+echo "First 10 lines of the file:"
+head -10 /etc/gitignore-vps-baseline
+```
+
+**Important behavioral notes to include in the report:**
+- `core.excludesFile` is **additive**, not a replacement. Each repo's
+  own `.gitignore` still applies fully; this just adds another layer.
+- Does **not** affect already-tracked files. If `.env` was already
+  committed in some older repo, it stays tracked — operator must
+  `git rm --cached` to detach.
+- Per-user override: any user can still set a different
+  `core.excludesFile` via `git config --global` in their home.
+
+### Task 6 — Nightly backups cron (OPTIONAL, only if operator agrees)
 
 **Verify:**
 ```bash
@@ -252,7 +341,18 @@ chmod 755 /opt/vps/reports
   getfacl /etc/secrets/godaddy.creds 2>&1 | grep -E '^(user|group|other)' 2>&1
   echo "\`\`\`"
   echo ""
-  echo "### Task 5 — nightly backups cron"
+  echo "### Task 5 — system-wide git excludes"
+  echo "\`\`\`"
+  ls -la /etc/gitignore-vps-baseline 2>&1
+  echo ""
+  echo "git config --system core.excludesFile:"
+  git config --system --get core.excludesFile 2>&1
+  echo ""
+  echo "first 10 lines:"
+  head -10 /etc/gitignore-vps-baseline 2>&1
+  echo "\`\`\`"
+  echo ""
+  echo "### Task 6 — nightly backups cron"
   echo "\`\`\`"
   ls -la /etc/cron.daily/backups-projects 2>&1
   ls /var/backups/ 2>&1 | head -5
@@ -299,7 +399,7 @@ world-readable) so any future Claude session — homekeep or otherwise
 ## One-line trigger (for the operator to paste into their root Claude)
 
 ```
-Read @/srv/homekeep/docs/vps-setup/root-infra-sync.md and execute the Procedure section end-to-end. Write the report to /opt/vps/reports/ per the template. Do not modify currently-running services. Ask me before running Task 5 (backups cron) if /var/backups/ has pre-existing content. At the end, print the Resume prompt so I can paste it back.
+Read @/srv/homekeep/docs/vps-setup/root-infra-sync.md and execute the Procedure section end-to-end. Write the report to /opt/vps/reports/ per the template. Do not modify currently-running services. Task 5 (system-wide git excludes) is safe to apply automatically. Ask me before running Task 6 (backups cron) if /var/backups/ has pre-existing content. At the end, print the Resume prompt so I can paste it back.
 ```
 
 That's it. All tasks are idempotent; safe to re-run at any time.
