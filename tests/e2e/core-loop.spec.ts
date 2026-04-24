@@ -274,8 +274,13 @@ test.describe('Phase 3 Core Loop (D-21)', () => {
     // Coverage ring renders.
     await expect(page.locator('[role="img"][aria-label^="Coverage"]')).toBeVisible();
 
-    // Tap the row -> early-completion guard fires.
+    // v1.2.1 PATCH2-06: tap opens the detail sheet; complete lives
+    // behind the sheet's Complete button. v1.2.1 PATCH2-07: the guard
+    // still fires here because a prior completion was seeded (1d ago),
+    // so shouldWarnEarly returns true (1d < 0.25 * 7d = 1.75d).
     await taskInThisWeek.click();
+    await expect(page.locator('[data-testid="task-detail-sheet"]')).toBeVisible();
+    await page.click('[data-testid="detail-complete"]');
 
     const dialog = page.locator('[data-testid="early-completion-dialog"]');
     await expect(dialog).toBeVisible();
@@ -335,8 +340,14 @@ test.describe('Phase 3 Core Loop (D-21)', () => {
     );
     await expect(overdueRow).toBeVisible();
 
-    // Tap -> no guard dialog (elapsed 10d > 0.25 * 7d = 1.75d).
+    // v1.2.1 PATCH2-06: tap opens the detail sheet; Complete button
+    // inside runs the same completion flow. No guard (elapsed 10d >
+    // 0.25 * 7d = 1.75d, and a prior completion exists so the PATCH2-07
+    // never-completed bypass isn't in play — it just happens to be
+    // outside the 25% window).
     await overdueRow.click();
+    await expect(page.locator('[data-testid="task-detail-sheet"]')).toBeVisible();
+    await page.click('[data-testid="detail-complete"]');
 
     // Guard dialog MUST NOT open.
     await expect(
