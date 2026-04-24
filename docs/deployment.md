@@ -217,6 +217,21 @@ docker compose \
 
 The VPS `46.62.151.57` is a **public-demo host only** (per STATE.md v1.2-security Architecture Decision). The personal instance lives on the home-lab server behind Tailscale. Running both on the same VPS would share the `caddy_data` volume between hosts and accidentally expose the personal instance's admin UI if the Caddy config drifted.
 
+## Public deployment hardening
+
+Running HomeKeep on a public domain is NOT a one-command experience. The
+Caddy overlay above gives you TLS and the basic reverse-proxy wiring, but
+every production instance also needs strong secrets, a tight firewall,
+rate-limit posture, and a rotation plan.
+
+See [`docs/deployment-hardening.md`](deployment-hardening.md) for the
+full 15-item operator checklist. Work through it top-to-bottom before
+your first public cut-over, and revisit it quarterly alongside the
+90-day secret rotation.
+
+For vulnerability reporting and the project's threat model, see
+[`SECURITY.md`](../SECURITY.md).
+
 ## Release + tagging (INFR-09)
 
 HomeKeep ships multi-arch container images to GitHub Container Registry (GHCR) via `.github/workflows/release.yml`. The workflow is triggered by a git tag matching `v*` and publishes:

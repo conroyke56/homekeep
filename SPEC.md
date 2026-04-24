@@ -2,7 +2,7 @@
 
 **Version:** 0.4 (v1.1 Scheduling & Flexibility)
 **Status:** Release-ready for v1.1.0-rc1
-**License:** AGPL-3.0-or-later
+**License:** AGPL-3.0-or-later (see [SECURITY.md](SECURITY.md) for reporting security issues)
 
 ---
 

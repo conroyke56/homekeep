@@ -285,6 +285,14 @@ modifications so users of that service can see what's running. Same spirit as
 the rest of the project: transparent, self-hostable, yours to change — just
 keep the changes visible to the people you serve.
 
+## Security
+
+Found a vulnerability? See [SECURITY.md](SECURITY.md) for our threat model,
+disclosure policy, and response SLA. Operators running HomeKeep on a
+public domain should also work through
+[`docs/deployment-hardening.md`](docs/deployment-hardening.md) before
+cut-over.
+
 ## Provenance
 
 Every HomeKeep build ships a small, static, zero-telemetry JSON probe at
