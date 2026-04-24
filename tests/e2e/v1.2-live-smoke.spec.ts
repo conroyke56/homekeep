@@ -161,49 +161,59 @@ test('v1.2 live smoke — full user journey', async ({ page }) => {
 
   // ── Step 8: Tap opens detail sheet (v1.2.1 PATCH2-06) ───────────
   // Prior to v1.2.1, tap completed the task. Now tap opens the detail
-  // sheet; completion reaches through the sheet's Complete button.
-  // Never-completed tasks (v1.2.1 PATCH2-07) no longer trigger the
-  // early-completion guard, so "Complete" in the detail sheet should
-  // mark done immediately without the "Mark done anyway?" confirmation.
-  console.log('[smoke] complete Wipe counter (via detail sheet)');
+  // sheet. Since the detail sheet IS the pathway to both reschedule
+  // AND complete, we verify reschedule reachability FIRST (while the
+  // task is still visible in the current band), THEN complete.
+  // Post-completion the task jumps to a future band and may not render
+  // on the current view, which made the prior ordering flaky.
+  console.log('[smoke] open detail sheet + verify reschedule reachable');
   await taskRow.click();
-  const completeBtn = page.getByRole('button', { name: /^complete$/i });
+  await expect(page.locator('[data-testid="task-detail-sheet"]')).toBeVisible({
+    timeout: 5_000,
+  });
+
+  // Reschedule button lives inside the detail sheet. Open + peek, then
+  // close without submitting.
+  const rescheduleBtn = page.getByRole('button', { name: /reschedule/i });
+  if (await rescheduleBtn.count()) {
+    await rescheduleBtn.click();
+    const justThisTime = page.getByRole('radio', { name: /just this time/i });
+    const fromNowOn = page.getByRole('radio', { name: /from now on/i });
+    if (await justThisTime.count()) {
+      await expect(justThisTime).toBeVisible();
+      await expect(fromNowOn).toBeVisible();
+    } else {
+      console.log('[smoke] reschedule action sheet radios not found — layout variant');
+    }
+    // Close reschedule action sheet to return to detail sheet
+    await page.keyboard.press('Escape');
+  } else {
+    console.log('[smoke] reschedule button not found — skipping that subflow');
+  }
+
+  // ── Step 9: Complete via the detail sheet ──────────────────────
+  // Never-completed tasks (v1.2.1 PATCH2-07) no longer trigger the
+  // early-completion guard, so "Complete" marks done immediately with
+  // no "Mark done anyway?" confirmation.
+  console.log('[smoke] complete Wipe counter via detail sheet');
+  // Re-open the detail sheet in case Escape closed it, or it's still
+  // open from the reschedule peek path.
+  if (!(await page.locator('[data-testid="task-detail-sheet"]').count())) {
+    await taskRow.click();
+    await expect(page.locator('[data-testid="task-detail-sheet"]')).toBeVisible({
+      timeout: 5_000,
+    });
+  }
+  const completeBtn = page.locator('[data-testid="detail-complete"]');
   if (await completeBtn.count()) {
     await completeBtn.click();
-    // Expect success toast (sonner) — no guard dialog because this is
-    // the first completion on a never-completed task.
     await expect(page.getByText(/done|marked|completed/i).first()).toBeVisible({
       timeout: 5_000,
     }).catch(() => {
       console.log('[smoke] toast not visible — may have closed already');
     });
   } else {
-    console.log('[smoke] detail sheet Complete button not found — layout variant');
-  }
-
-  // ── Step 9-10: Open remaining task + reschedule ─────────────────
-  console.log('[smoke] reschedule Take bins');
-  await page.goto(`/h/${homeId}`);
-  const binsRow = page.locator('[data-task-name="Wipe counter"]').first();
-  await expect(binsRow).toBeVisible({ timeout: 10_000 });
-  await binsRow.click();
-  // Look for Reschedule button in action sheet / detail sheet
-  const rescheduleBtn = page.getByRole('button', { name: /reschedule/i });
-  if (await rescheduleBtn.count()) {
-    await rescheduleBtn.click();
-    // Action sheet should appear with date picker + radio
-    const justThisTime = page.getByRole('radio', { name: /just this time/i });
-    const fromNowOn = page.getByRole('radio', { name: /from now on/i });
-    if (await justThisTime.count()) {
-      await expect(justThisTime).toBeVisible();
-      await expect(fromNowOn).toBeVisible();
-      // Close the action sheet (don't actually submit — just prove it opens)
-      await page.keyboard.press('Escape');
-    } else {
-      console.log('[smoke] reschedule action sheet radios not found — layout variant');
-    }
-  } else {
-    console.log('[smoke] reschedule button not found — skipping that subflow');
+    console.log('[smoke] detail-complete button not found — layout variant');
   }
 
   // Step 11 (one-off task creation via form) skipped from live smoke —
