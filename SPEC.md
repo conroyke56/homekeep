@@ -761,6 +761,87 @@ Phases 22-28.
 - DNS-01 wildcard cert via GoDaddy plugin for `*.demo.the-kizz.com`
   (currently operator manual DNS; target v1.3)
 
+### v0.5.1 — Live-Smoke Fixes & Self-Host UX (2026-04-24)
+
+Patch release after v1.2.0 shipped. Non-material spec impact — the
+threat model and surface area are unchanged. Ships as `v1.2.1`. Seven
+REQ-IDs (PATCH2-01..07) across auth, routing, documentation links, and
+task-row UX. Also tightens the Release pipeline so future tags auto-
+create GitHub Releases.
+
+**Auth (Phase 29, PATCH2-01..02):**
+- PATCH2-01: `secure` cookie flag now derives from `SITE_URL` protocol
+  (`https://` → `true`, else `false`) instead of `process.env.NODE_ENV`.
+  Fixes a LAN-HTTP production regression where `NODE_ENV=production` +
+  `SITE_URL=http://...` set `Secure=true` → browsers drop the cookie
+  over plain HTTP → authed navigation bounced to `/login`. Handles
+  localhost-dev, LAN-HTTP-prod, and public-HTTPS correctly.
+- PATCH2-02: Remember-me checkbox on the login form. Default checked =
+  14-day persistent cookie (prior behavior); unchecked = session cookie
+  (dropped on browser close). Server action reads `rememberMe` from
+  FormData; SDK/API callers with no checkbox get the 14-day default.
+
+**Caddy (Phase 30, PATCH2-03):**
+- PATCH2-03: explicit allow-list for Next.js API paths (`/api/health`,
+  `/api/csp-report`, `/api/admin/*`, `/api/demo/*`) routed to `:3001`
+  BEFORE the PB `/api/*` catch-all. Prior config sent every `/api/*`
+  to `:8090` — only PB-native endpoints succeeded; Next-owned routes
+  404'd on the VPS edge. CSP-report endpoint now reachable from the
+  browser at the prod port.
+
+**UI & UX (Phase 31/32, PATCH2-04..07):**
+- PATCH2-04: dropped the dead `<Link href="/deployment">Learn more</Link>`
+  from `InsecureContextBanner`. Route never existed; Next.js prefetched
+  the RSC payload on hydration, producing 9+ console 404s per HTTP
+  session. Banner copy kept; full HTTPS guidance continues to live in
+  `docs/deployment-hardening.md`.
+- PATCH2-05: `PASSWORD_POLICY` env flag (plus
+  `NEXT_PUBLIC_PASSWORD_POLICY` for client-side validation parity).
+  Default `simple` = 8-char floor on signup + reset (appropriate for
+  LAN / Tailscale / single-household self-hosts). Opt-in `strong` =
+  12-char floor (preserves Phase 23 SEC-06 behavior for public-facing
+  deploys). Login schema always accepts 8+ so pre-flip accounts are
+  not locked out. `docs/deployment-hardening.md` item 12b covers the
+  public-deploy flip.
+- PATCH2-06: task tap now opens the detail sheet by default (iOS-style
+  tap-to-view). Completion reaches through the sheet's Complete button.
+  `TaskRow` gains a `primaryTap` prop; `PersonTaskList` opts into the
+  pre-v1.2.1 "tap = complete" behavior explicitly because its
+  `onDetail` opens a reschedule sheet, not a detail view.
+- PATCH2-07: never-completed tasks bypass the early-completion guard.
+  Previously `task.created` was used as the fallback reference when
+  `lastCompletion` was null, which warned on every first-ever
+  completion ("I just added this and I'm doing it today" is the common
+  case, not a double-tap accident). `shouldWarnEarly` now returns
+  `false` when `lastCompletion === null`; the guard only protects
+  against genuine re-completion accidents.
+
+**Release pipeline:**
+- `release.yml` now auto-creates a GitHub Release on every tag push
+  (softprops/action-gh-release) with generated notes + supply-chain
+  attestation pointers. Prior workflow built + cosign-signed the
+  image but never created the Release object — the Releases page
+  listed v1.0.0 as Latest despite v1.1.x and v1.2.0 shipping. RCs
+  flag prerelease automatically so they don't steal the Latest badge.
+- Releases for v1.1.0-rc1, v1.1.1-rc1, v1.1.1, v1.2.0 backfilled via
+  API at ship time; v1.2.1 was the first to auto-create.
+- Client-bundle regression check (Pitfall #3) narrowed from a blanket
+  `NEXT_PUBLIC_*` ban to an allow-list gate so intentional public vars
+  (currently only `NEXT_PUBLIC_PASSWORD_POLICY`) can ship without
+  suppressing the leak-detection value.
+- CI `lint-test-build` timeout bumped 25 → 45 min (arm64 cross-build
+  under QEMU regularly raced the ceiling; Release workflow already
+  used 60).
+
+**Ownership change:**
+- GitHub owner renamed `conroyke56` → `the-kizz`. Repo redirects 301.
+  GHCR does NOT redirect — all image references updated to
+  `ghcr.io/the-kizz/homekeep`.
+- Demo domain convention finalized: `<project>.demo.the-kizz.com`.
+  HomeKeep demo target `homekeep.demo.the-kizz.com` replaces the
+  prior `demo.kizz.space` plan. Personal instance migrates to homelab
+  (Tailscale/LAN) — no public DNS for personal.
+
 ### v0.4 — v1.1 Scheduling & Flexibility (2026-04-22)
 
 Material spec bump (v0.3→v0.4) because the LOAD addendum changes the scheduling thesis. Ships as `v1.1.0-rc1`. All v1.1 migrations are additive; v1.0 installs upgrading via `:1` or `:latest` lose no data. Anchored-mode tasks remain byte-identical to v1.0 (the explicit opt-out from smoothing).
