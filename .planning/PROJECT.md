@@ -8,7 +8,17 @@ A self-hosted, open-source household maintenance PWA for couples and families. E
 
 The household's recurring maintenance is visible, evenly distributed, and nothing falls through the cracks — without creating anxiety or guilt.
 
-## Current Milestone: v1.2-security — Red Team Audit & Public-Facing Hardening
+## Current Milestone: v1.4 — Infra Cleanup & Test Fix
+
+**Goal:** close the three explicit deferrals carried out of v1.3 — one application-code test fix (TESTFIX-07: notifications checkbox React 19 hydration) and two infrastructure cleanups already scheduled by systemd timers (INFRA-01: wildcard TLS via DNS-01 plugin rebuild; INFRA-02: `/home/sprout/revproxy/` decommission post-soak). No new user-facing features. See `.planning/milestones/v1.4-infra-cleanup-and-test-fix-REQUIREMENTS.md`.
+
+**Phases planned:** 39, 40, 41. Phase 39 is pure Claude work and startable now; Phases 40 + 41 are root-coordinated and gated on the 2026-05-01 timer fires.
+
+## Previous Milestone: v1.3 — Test Stabilization (shipped 2026-04-24)
+
+Archived to `.planning/v1.3-test-stabilization-MILESTONE-AUDIT.md`. 5/6 REQs delivered (TESTFIX-01 + 03 + 04 + 05 + 06). TESTFIX-02 (notifications checkbox flake) deferred to v1.4 after three test-plumbing fixes failed. Headline: Phase 36's single-line `createServerClientWithRefresh` retry fixed 18 E2E assertions across 12 specs — what the v1.2-security audit framed as "10 pre-existing failures" was one race. Tagged `v1.3.0` on commit `daadc8f`.
+
+## Earlier Milestone: v1.2-security — Red Team Audit & Public-Facing Hardening
 
 **Goal:** Prove HomeKeep is safe to expose on a public-facing VPS + safe to install and run by anyone pulling the Docker image. Red-team audit, penetration-probe the running demo, and ship a hardening pass across auth, deployment config, supply chain, and documentation — before announcing the project more widely.
 

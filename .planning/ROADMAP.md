@@ -617,3 +617,73 @@ Plans:
 | 26. Demo Instance Architecture | 0/2 | Not started | - |
 | 27. Supply Chain Hardening | 0/1 | Not started | - |
 | 28. SECURITY.md + Responsible Disclosure | 0/1 | Not started | - |
+
+---
+
+## v1.4: Infra Cleanup & Test Fix
+
+**Audit reference:** [.planning/milestones/v1.4-infra-cleanup-and-test-fix-REQUIREMENTS.md](milestones/v1.4-infra-cleanup-and-test-fix-REQUIREMENTS.md) — closes the three explicit deferrals from v1.3 (TESTFIX-02 component fix + two timer-scheduled infra cleanups).
+
+### Phase 39: Notifications Checkbox Hydration Root-Cause + Fix
+
+**Goal:** Un-skip both blocks in `tests/e2e/notifications.spec.ts` by fixing the underlying React 19 / RHF / headless-Chromium interaction at the component level (NOT more test plumbing). Three test-side fixes failed during v1.3.
+
+**Depends on:** v1.3 shipped (carries the deferred TESTFIX-02 forward as TESTFIX-07).
+**Requirements:** TESTFIX-07
+**Plans:** TBD (estimate 1)
+
+**Success criteria:**
+1. Both `test.skip()` lines un-skipped in `notifications.spec.ts`
+2. Root cause confirmed via investigation (likely H1 React 19 concurrent hydration; possibly H2 RHF register vs Controller)
+3. Fix runs green on CI 10 consecutive cycles with zero retries consumed by the v1.3 flake-budget gate
+4. All 678 unit tests still green
+
+Plans:
+- [ ] 39-01: TBD
+
+### Phase 40: Wildcard TLS Rebuild (caddy-dns/godaddy plugin + DNS-01)
+
+**Goal:** Replace upstream `caddy:2-alpine` in `/opt/vps/revproxy/` with a custom build containing the `caddy-dns/godaddy` plugin so `*.the-kizz.com` issues via DNS-01. Triggered by `vps-followup-20260501.timer` fire on 2026-05-01.
+
+**Depends on:** Phase 39 (cosmetic; allows a rolled-up commit chain) AND `vps-followup-20260501.timer` fire.
+**Requirements:** INFRA-01
+**Coordination:** Claude drafts the change set + paste-ready root prompt. User executes as root.
+**Plans:** TBD (estimate 1)
+
+**Success criteria:**
+1. `revproxy-caddy-1` rebuilt with `xcaddy --with github.com/caddy-dns/godaddy`
+2. Caddyfile global block configured with `acme_dns godaddy ...` env-substituted
+3. `*.the-kizz.com` cert visible in Caddy data; `homekeep.demo.the-kizz.com` SAN-validated
+4. New subdomain provisions instantly via DNS-01 (no port 80 hit)
+5. `/opt/vps/revproxy/README.md` documents the rebuild flow
+
+Plans:
+- [ ] 40-01: TBD
+
+### Phase 41: `/home/sprout/revproxy/` Decommission
+
+**Goal:** Remove the v1.2.1 rollback safety net at `/home/sprout/revproxy/` after 7-day stability soak. Triggered by `vps-followup-phase34-cleanup.timer` fire on 2026-05-01 with built-in health-check gate.
+
+**Depends on:** Phase 40 (new revproxy verified healthy) AND `vps-followup-phase34-cleanup.timer` fire.
+**Requirements:** INFRA-02
+**Coordination:** Claude drafts the verify+remove script + paste-ready root prompt. User executes as root.
+**Plans:** TBD (estimate 1)
+
+**Success criteria:**
+1. Three pre-removal health checks pass (revproxy uptime since 2026-04-24, demo /api/health 200, sprout-m0 200)
+2. `/home/sprout/revproxy/` directory removed
+3. `vps-followup-phase34-cleanup.timer` + service unit removed
+4. Cleanup report at `/opt/vps/reports/phase34-cleanup-2026-05-01.md`
+
+Plans:
+- [ ] 41-01: TBD
+
+## Progress (v1.4)
+
+**Execution order:** 39 → (40 + 41 same root window once timers fire)
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 39. Notifications Checkbox Hydration | 0/1 | Not started | - |
+| 40. Wildcard TLS Rebuild | 0/1 | Not started (timer-gated 2026-05-01) | - |
+| 41. `/home/sprout/revproxy/` Decommission | 0/1 | Not started (timer-gated 2026-05-01) | - |
