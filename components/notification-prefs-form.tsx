@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import {
@@ -73,6 +73,7 @@ export function NotificationPrefsForm({
 
   const {
     register,
+    control,
     watch,
     formState: { errors },
   } = useForm<NotificationPrefs>({
@@ -148,15 +149,33 @@ export function NotificationPrefsForm({
             )}
           </div>
 
+          {/*
+            Phase 39 (TESTFIX-07) fallback: Controller-wrapped checkboxes
+            so React (via RHF state) is the single source of truth for
+            `checked`, not the uncontrolled DOM input. Removes the
+            React 19 reconciliation race that snapped post-click DOM
+            state back to defaultValues under CI's headless Chromium
+            even with the hydration signal in place.
+          */}
           <div
             className="flex items-start gap-3"
             data-field="notify-overdue"
           >
-            <input
-              id="notify-overdue"
-              type="checkbox"
-              className="mt-1 size-4"
-              {...register('notify_overdue')}
+            <Controller
+              name="notify_overdue"
+              control={control}
+              render={({ field }) => (
+                <input
+                  id="notify-overdue"
+                  name={field.name}
+                  type="checkbox"
+                  className="mt-1 size-4"
+                  checked={!!field.value}
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                />
+              )}
             />
             <div className="flex-1">
               <Label htmlFor="notify-overdue" className="font-normal">
@@ -169,11 +188,21 @@ export function NotificationPrefsForm({
             className="flex items-start gap-3"
             data-field="notify-assigned"
           >
-            <input
-              id="notify-assigned"
-              type="checkbox"
-              className="mt-1 size-4"
-              {...register('notify_assigned')}
+            <Controller
+              name="notify_assigned"
+              control={control}
+              render={({ field }) => (
+                <input
+                  id="notify-assigned"
+                  name={field.name}
+                  type="checkbox"
+                  className="mt-1 size-4"
+                  checked={!!field.value}
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                />
+              )}
             />
             <div className="flex-1">
               <Label htmlFor="notify-assigned" className="font-normal">
@@ -186,11 +215,21 @@ export function NotificationPrefsForm({
             className="flex items-start gap-3"
             data-field="notify-partner-completed"
           >
-            <input
-              id="notify-partner-completed"
-              type="checkbox"
-              className="mt-1 size-4"
-              {...register('notify_partner_completed')}
+            <Controller
+              name="notify_partner_completed"
+              control={control}
+              render={({ field }) => (
+                <input
+                  id="notify-partner-completed"
+                  name={field.name}
+                  type="checkbox"
+                  className="mt-1 size-4"
+                  checked={!!field.value}
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                />
+              )}
             />
             <div className="flex-1">
               <Label
@@ -206,11 +245,21 @@ export function NotificationPrefsForm({
             className="flex items-start gap-3"
             data-field="notify-weekly-summary"
           >
-            <input
-              id="notify-weekly-summary"
-              type="checkbox"
-              className="mt-1 size-4"
-              {...register('notify_weekly_summary')}
+            <Controller
+              name="notify_weekly_summary"
+              control={control}
+              render={({ field }) => (
+                <input
+                  id="notify-weekly-summary"
+                  name={field.name}
+                  type="checkbox"
+                  className="mt-1 size-4"
+                  checked={!!field.value}
+                  onBlur={field.onBlur}
+                  ref={field.ref}
+                  onChange={(e) => field.onChange(e.target.checked)}
+                />
+              )}
             />
             <div className="flex-1">
               <Label
