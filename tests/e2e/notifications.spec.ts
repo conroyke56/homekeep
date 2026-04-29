@@ -77,7 +77,12 @@ async function authPB(
     `${PB_URL}/api/collections/users/auth-with-password`,
     { data: { identity: email, password: pw } },
   );
-  expect(res.ok()).toBeTruthy();
+  if (!res.ok()) {
+    const body = await res.text();
+    throw new Error(
+      `authPB ${email} failed: ${res.status()} ${res.statusText()} :: ${body}`,
+    );
+  }
   const body = await res.json();
   return { token: body.token as string, userId: body.record.id as string };
 }
@@ -139,42 +144,17 @@ async function findTaskId(
 /* ======================================================================= */
 
 test.describe.serial('Suite E: Notifications & Gamification (06-03)', () => {
-  // v1.3 TESTFIX-02 FINAL (2026-04-24): re-skipped after three
-  // separate fix attempts failed to make this test deterministic.
-  //
-  // Investigation so far:
-  //  1. Original flake: RHF conditional-reveal race on
-  //     `[data-field=weekly-summary-day]`. Fix: timeout bump. Passed
-  //     locally but flaked 1/N in CI.
-  //  2. Second attempt: click+poll+retry. Introduced a toggle bug
-  //     where the retry clicked a just-checked box back off.
-  //  3. Third attempt (current): single click + 10s wait. CI shows
-  //     14 polls over 10s ALL returning "unchecked" — the click
-  //     fires (Playwright confirms the element dispatched) but
-  //     the checkbox state never commits in React. Not a timing
-  //     race — the click is being eaten somewhere.
-  //
-  // Hypothesis (needs v1.4 investigation): React 19 concurrent
-  // hydration + RHF `register` on a plain `<input type="checkbox">`
-  // may have a pre-hydration click-swallow race in CI's headless
-  // Chromium specifically. The `fill()` call on the topic input
-  // works fine right before this click, so React IS responding to
-  // SOME events — just not the checkbox click. Could be:
-  //   - A React Server Component hydration boundary
-  //   - RHF's `register` ref not attached yet
-  //   - Playwright's click dispatch timing in headless mode
-  //
-  // Defer to a dedicated v1.4 phase:
-  //   v1.4-notifications-checkbox-hydration
-  //   REQ: TESTFIX-02b — root-cause the post-hydration checkbox
-  //        click-swallow + fix at component level (likely add an
-  //        explicit data-hydrated signal and wait for it in tests)
-  //
-  // Unit coverage at tests/unit/lib/schemas/notification-prefs.test.ts
-  // continues to gate the schema + action path. Part 2 is skipped
-  // as collateral (serial describe means it can't run without Part
-  // 1's setup).
-  test.skip('Part 1: /person shows real notification prefs form; save + reload persists topic and weekly_summary_day', async ({
+  // Phase 39 (TESTFIX-07): un-skipped after fixing the underlying
+  // SSR→hydration→ref-attach race in NotificationPrefsForm. Root
+  // cause was the form's `data-notifications-ready="true"` attr
+  // being a literal SSR string — Playwright read it from hydration
+  // markup and clicked the checkbox before RHF's register() refs
+  // were attached, so the click fired with no onChange handler and
+  // post-hydration reconciliation snapped the uncontrolled input's
+  // checked state back to defaultValues. The component now flips
+  // the attribute via useState+useEffect post-mount; the test
+  // gates on it before the click.
+  test('Part 1: /person shows real notification prefs form; save + reload persists topic and weekly_summary_day', async ({
     page,
   }) => {
     const pw = 'password1234';
@@ -192,18 +172,22 @@ test.describe.serial('Suite E: Notifications & Gamification (06-03)', () => {
       page.locator('[data-notification-prefs-placeholder]'),
     ).toHaveCount(0);
 
+    // Phase 39 hydration gate: wait for the form to flip
+    // data-notifications-ready from "false" (SSR) to "true"
+    // (post-mount effect). This guarantees RHF's register() refs
+    // are attached and onChange handlers wired before any
+    // checkbox click — closes the v1.3 TESTFIX-02 race.
+    await expect(
+      page.locator(
+        '[data-notification-prefs-form][data-notifications-ready="true"]',
+      ),
+    ).toBeVisible({ timeout: 5_000 });
+
     // Fill ntfy_topic.
     const topic = `homekeep-alice-${Date.now().toString(36)}`;
     await page.locator('[data-field=ntfy-topic] input').fill(topic);
 
     // Toggle weekly summary → weekly day select should reveal.
-    // v1.3 TESTFIX-02 (revised twice): earlier retry-click-if-not-
-    // committed pattern had a subtle bug — if the first click's
-    // state-commit landed just past the inner 2s poll, the retry
-    // would toggle the checkbox back OFF, leaving it unchecked.
-    // Simpler correct pattern: click ONCE, wait with a generous
-    // timeout for React 19's concurrent commit to land. If 10s
-    // isn't enough, the issue is deeper than a tick race.
     const weeklyBox = page.locator(
       '[data-field=notify-weekly-summary] input[type=checkbox]',
     );
@@ -242,10 +226,32 @@ test.describe.serial('Suite E: Notifications & Gamification (06-03)', () => {
     ).toHaveValue('monday');
   });
 
-  // v1.3 TESTFIX-02 collateral skip: Part 2 is in the same
-  // `.describe.serial` block and hits the same checkbox (overdueBox)
-  // with the same root cause as Part 1. Re-skipping both together;
-  // v1.4 investigation will unskip both once the hydration fix lands.
+  // Phase 39 (TESTFIX-07) PARTIAL: hydration race fixed (Part 2 now
+  // gets past the checkbox click + Save + toast — see error-context
+  // page snapshot in test-results/), but Part 2 fails on a NEW
+  // pre-existing bug that was masked by the v1.3 skip:
+  //
+  //   Direct PB REST `POST /api/collections/users/auth-with-password`
+  //   returns 400 "Failed to authenticate" for the freshly-signed-up
+  //   user, despite the SAME credentials succeeding in signupAction's
+  //   SDK authWithPassword call moments earlier. Suspected causes:
+  //     - PB rate-limit hook returning 400 instead of 429 under some
+  //       conditions
+  //     - users-collection auth-rule restricting @guest path access
+  //     - test isolation: page session vs APIRequestContext using
+  //       different IPs/audiences
+  //
+  //   Not a hydration issue — Playwright's page snapshot shows the
+  //   form fully interactive and "Notification preferences saved"
+  //   toast visible. The failure is at notifications.spec.ts:80
+  //   (authPB helper) on line 272 of Part 2.
+  //
+  //   Defer to v1.5 as a fresh REQ. Re-skipping Part 2 ONLY; Part 1
+  //   stays un-skipped (its hydration fix is the actual TESTFIX-07
+  //   deliverable). Unit coverage at
+  //   tests/unit/lib/schemas/notification-prefs.test.ts and the
+  //   06-02 integration-suite scheduler test on port 18097 continue
+  //   to gate the Part 2 surface.
   test.skip('Part 2: set topic → back-date overdue task → run-scheduler → notifications row asserted + idempotent', async ({
     page,
     request,
@@ -264,19 +270,22 @@ test.describe.serial('Suite E: Notifications & Gamification (06-03)', () => {
 
     // Configure prefs: topic + notify_overdue=true (default on).
     await page.goto(`/h/${homeId}/person`);
+    // Phase 39 hydration gate (same as Part 1).
+    await expect(
+      page.locator(
+        '[data-notification-prefs-form][data-notifications-ready="true"]',
+      ),
+    ).toBeVisible({ timeout: 5_000 });
     const topic = `homekeep-e2e-${Date.now().toString(36)}`;
     await page.locator('[data-field=ntfy-topic] input').fill(topic);
-    // notify_overdue default is on; just ensure it's checked.
-    // v1.3 TESTFIX-02 (revised twice): same single-click + generous
-    // timeout pattern as Part 1's weeklyBox. Idempotent — if
-    // already checked, no-op.
+    // notify_overdue default is on; idempotent check + click.
     const overdueBox = page.locator(
       '[data-field=notify-overdue] input[type=checkbox]',
     );
     await expect(overdueBox).toBeVisible({ timeout: 5_000 });
     if (!(await overdueBox.isChecked())) {
       await overdueBox.click();
-      await expect(overdueBox).toBeChecked({ timeout: 10_000 });
+      await expect(overdueBox).toBeChecked({ timeout: 5_000 });
     }
     await page.locator('button[type=submit]:has-text("Save")').click();
     await expect(

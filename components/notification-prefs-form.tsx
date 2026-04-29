@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useRef } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -59,6 +59,18 @@ export function NotificationPrefsForm({
     INITIAL,
   );
 
+  // Phase 39 (TESTFIX-07): post-hydration signal. SSR ships
+  // data-notifications-ready="false"; the effect flips it to "true"
+  // only AFTER React commits the post-mount cycle, by which point
+  // RHF's register() refs are attached and onChange handlers are
+  // wired. E2E waits on this attribute before clicking checkboxes,
+  // closing the SSR→hydration→ref-attach race that survived three
+  // v1.3 test-plumbing fix attempts.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
   const {
     register,
     watch,
@@ -97,7 +109,7 @@ export function NotificationPrefsForm({
   return (
     <Card
       data-notification-prefs-form
-      data-notifications-ready="true"
+      data-notifications-ready={hydrated ? 'true' : 'false'}
       data-state-ok={state.ok === true ? 'true' : 'false'}
     >
       <CardHeader>
